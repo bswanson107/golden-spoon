@@ -1,6 +1,12 @@
 <script lang="ts">
 	import TeamLogo from '$lib/components/TeamLogo.svelte';
 	import {
+		type PickVisibility,
+		DEFAULT_PICK_VISIBILITY,
+		isOpenPickVisibility,
+		parsePickVisibility
+	} from '$lib/leagueRules';
+	import {
 		normalizePickUserId,
 		pickSubmissionKey,
 		type PickSubmissionsByCell,
@@ -15,7 +21,8 @@
 		standings = [],
 		currentUserId = null,
 		viewWeek = null,
-		pickSubmissions = {}
+		pickSubmissions = {},
+		pickVisibility = DEFAULT_PICK_VISIBILITY
 	}: {
 		picks: LeaguePick[];
 		standings?: { user_id: string; display_name: string; standing_rank: number }[];
@@ -23,7 +30,11 @@
 		viewWeek?: number | null;
 		/** `${userId}:${weekNumber}` → submission status for hidden picks. */
 		pickSubmissions?: PickSubmissionsByCell;
+		pickVisibility?: PickVisibility | string;
 	} = $props();
+
+	const resolvedPickVisibility = $derived(parsePickVisibility(pickVisibility));
+	const picksAreOpen = $derived(isOpenPickVisibility(resolvedPickVisibility));
 
 	const LOGO_SIZE = 24;
 
@@ -90,7 +101,7 @@
 				const key = pickSubmissionKey(player.userId, week);
 				const pick = player.picks.get(week);
 				const submission = pickSubmissions[key];
-				displays.set(key, cellDisplay(pick, submission));
+				displays.set(key, cellDisplay(pick, submission, resolvedPickVisibility));
 			}
 		}
 
@@ -118,7 +129,8 @@
 
 	function cellDisplay(
 		pick: LeaguePick | undefined,
-		submission: WeekPickSubmissionStatus | undefined
+		submission: WeekPickSubmissionStatus | undefined,
+		visibility: PickVisibility
 	): CellDisplay {
 		if (pick?.is_missed || pick?.outcome === 'missed' || submission === 'missed') return 'missed';
 
@@ -126,6 +138,7 @@
 		if (!hasSubmitted) return 'empty';
 
 		if (pick) {
+			if (isOpenPickVisibility(visibility)) return 'visible';
 			const kickedOff = new Date(pick.kickoff_at).getTime() <= now;
 			if (kickedOff) return 'visible';
 		}
@@ -196,7 +209,9 @@
 	<span class="legend-ring ring-loss"></span> loss ·
 	<span class="legend-ring ring-tie"></span> tie ·
 	<span class="legend-ring ring-pending"></span> pending ·
-	<span class="legend-ring ring-hidden"><span class="legend-lock">🔒</span></span> hidden pick ·
+	{#if !picksAreOpen}
+		<span class="legend-ring ring-hidden"><span class="legend-lock">🔒</span></span> hidden pick ·
+	{/if}
 	<span class="legend-ring ring-missed"><span class="legend-missed">×</span></span> missed
 </p>
 

@@ -1,4 +1,11 @@
 import { browser } from '$app/environment';
+import {
+	compareTiebreaker,
+	DEFAULT_TIEBREAKER_MODE,
+	DEFAULT_UNDERDOG_THRESHOLD,
+	type TiebreakerMode,
+	parseTiebreakerMode
+} from '$lib/leagueRules';
 import { isDemoSeason } from '$lib/season';
 import type { DemoPick, DemoState, ScoredDemoPick } from '$lib/types/demo';
 import type { WeekGame } from '$lib/types/game';
@@ -6,7 +13,7 @@ import type { LeaguePick, PickOutcome, StandingRow } from '$lib/types/standings'
 
 const STORAGE_PREFIX = 'golden-ladle-demo';
 
-export const DEFAULT_UNDERDOG_THRESHOLD = 33;
+export { DEFAULT_UNDERDOG_THRESHOLD };
 
 export function demoStorageKey(leagueId: string, userId: string): string {
 	return `${STORAGE_PREFIX}:${leagueId}:${userId}`;
@@ -264,7 +271,8 @@ function buildStandingsFromPicks(
 	picks: LeaguePick[],
 	baseStandings: StandingRow[],
 	userId: string,
-	displayName: string
+	displayName: string,
+	tiebreakerMode: TiebreakerMode = DEFAULT_TIEBREAKER_MODE
 ): StandingRow[] {
 	const picksByUser = new Map<string, LeaguePick[]>();
 	for (const pick of picks) {
@@ -303,7 +311,11 @@ function buildStandingsFromPicks(
 	rows.sort(
 		(a, b) =>
 			b.total_points - a.total_points ||
-			a.tiebreaker_picked_team_wins - b.tiebreaker_picked_team_wins ||
+			compareTiebreaker(
+				a.tiebreaker_picked_team_wins,
+				b.tiebreaker_picked_team_wins,
+				tiebreakerMode
+			) ||
 			a.display_name.localeCompare(b.display_name)
 	);
 
@@ -316,8 +328,10 @@ export function mergeDemoLeagueView(
 	demoState: DemoState,
 	gamesByWeek: Map<number, WeekGame[]>,
 	userId: string,
-	displayName: string
+	displayName: string,
+	tiebreakerMode: TiebreakerMode | string = DEFAULT_TIEBREAKER_MODE
 ): { picks: LeaguePick[]; standings: StandingRow[]; maxVisibleWeek: number } {
+	const resolvedTiebreaker = parseTiebreakerMode(tiebreakerMode);
 	if (!demoState.enabled) {
 		return { picks: dbPicks, standings: dbStandings, maxVisibleWeek: 18 };
 	}
@@ -343,7 +357,13 @@ export function mergeDemoLeagueView(
 		mergedPicks.push(demoPickToLeaguePick(week, demoPick, scored, userId, displayName, game));
 	}
 
-	const standings = buildStandingsFromPicks(mergedPicks, dbStandings, userId, displayName);
+	const standings = buildStandingsFromPicks(
+		mergedPicks,
+		dbStandings,
+		userId,
+		displayName,
+		resolvedTiebreaker
+	);
 
 	return { picks: mergedPicks, standings, maxVisibleWeek };
 }

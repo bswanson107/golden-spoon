@@ -1,9 +1,17 @@
 <script lang="ts">
 	import type { StandingRow } from '$lib/types/standings';
+	import {
+		DEFAULT_TIEBREAKER_MODE,
+		type TiebreakerMode,
+		parseTiebreakerMode,
+		tiebreakerHint,
+		tiebreakerShortLabel
+	} from '$lib/leagueRules';
 
 	let {
 		standings,
 		currentUserId = null,
+		tiebreakerMode = DEFAULT_TIEBREAKER_MODE,
 		adminKickEnabled = false,
 		commissionerId = null,
 		kickingUserId = null,
@@ -11,11 +19,14 @@
 	}: {
 		standings: StandingRow[];
 		currentUserId?: string | null;
+		tiebreakerMode?: TiebreakerMode | string;
 		adminKickEnabled?: boolean;
 		commissionerId?: string | null;
 		kickingUserId?: string | null;
 		onKickPlayer?: (userId: string, displayName: string) => void;
 	} = $props();
+
+	const resolvedTiebreaker = $derived(parseTiebreakerMode(tiebreakerMode));
 
 	function formatRecord(row: StandingRow): string {
 		if (row.ties > 0) {
@@ -40,7 +51,9 @@
 				<th scope="col">Player</th>
 				<th scope="col" class="num">Pts</th>
 				<th scope="col" class="num">W-L</th>
-				<th scope="col" class="num">TB</th>
+				<th scope="col" class="num" title={tiebreakerHint(resolvedTiebreaker)}>
+					{tiebreakerShortLabel(resolvedTiebreaker)}
+				</th>
 			</tr>
 		</thead>
 		<tbody>

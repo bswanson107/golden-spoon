@@ -1,8 +1,8 @@
 <script lang="ts">
 	import GameCard from '$lib/components/pick/GameCard.svelte';
-	import PicksGrid from '$lib/components/league/PicksGrid.svelte';
 	import TeamLogo from '$lib/components/TeamLogo.svelte';
 	import WeekNavigator from '$lib/components/pick/WeekNavigator.svelte';
+	import { DEFAULT_UNDERDOG_THRESHOLD } from '$lib/leagueRules';
 	import {
 		buildDemoPick,
 		canPickWeek,
@@ -17,8 +17,6 @@
 	import { formatSyncTimeAgo, getLastSyncTime, requestGameSync } from '$lib/syncGames';
 	import type { DemoPick, DemoState } from '$lib/types/demo';
 	import type { WeekGame } from '$lib/types/game';
-	import type { LeaguePick, StandingRow } from '$lib/types/standings';
-	import type { PickSubmissionsByCell } from '$lib/standings';
 
 	type SavePickOptions = { clearWeek?: number };
 
@@ -33,11 +31,7 @@
 		onWeekReset,
 		demoState = null,
 		userPicksByWeek = new Map<number, UserLeaguePick>(),
-		leaguePicks = [],
-		standings = [],
-		pickSubmissions = {},
-		currentUserId = null,
-		underdogThreshold = 33,
+		underdogThreshold = DEFAULT_UNDERDOG_THRESHOLD,
 		saving = false,
 		onSavePick
 	}: {
@@ -51,10 +45,6 @@
 		onWeekReset?: () => void;
 		demoState?: DemoState | null;
 		userPicksByWeek?: Map<number, UserLeaguePick>;
-		leaguePicks?: LeaguePick[];
-		standings?: StandingRow[];
-		pickSubmissions?: PickSubmissionsByCell;
-		currentUserId?: string | null;
 		underdogThreshold?: number;
 		saving?: boolean;
 		onSavePick: (week: number, pick: DemoPick, options?: SavePickOptions) => void | Promise<void>;
@@ -112,10 +102,6 @@
 
 	const showSubmitButton = $derived(
 		pickingEnabled && games.length > 0 && !(mode === 'live' && liveCurrentPick !== null)
-	);
-
-	const showLeaguePicks = $derived(
-		mode === 'live' && standings.length > 0 && !loading && !error
 	);
 
 	const usageMap = $derived.by(() => {
@@ -463,22 +449,6 @@
 			</div>
 		{/if}
 
-		{#if showLeaguePicks}
-			<section class="league-picks-card">
-				<h3 class="league-picks-title">League picks</h3>
-				<p class="league-picks-hint muted">
-					🔒 means a pick is in — the team stays hidden until that game kicks off.
-				</p>
-				<PicksGrid
-					picks={leaguePicks}
-					{standings}
-					{currentUserId}
-					viewWeek={activeWeek}
-					{pickSubmissions}
-				/>
-			</section>
-		{/if}
-
 		{#if games.length === 0}
 			<p class="muted">No games found for Week {activeWeek}.</p>
 		{:else}
@@ -667,28 +637,6 @@
 	.hint {
 		margin: 0 0 0.85rem;
 		font-size: 0.82rem;
-	}
-
-	.league-picks-card {
-		margin: 0 0 1rem;
-		padding: 0.85rem 0.95rem 0.95rem;
-		border-radius: var(--radius);
-		background: var(--surface);
-		box-shadow: var(--shadow-sm);
-	}
-
-	.league-picks-title {
-		margin: 0 0 0.2rem;
-		font-size: 0.82rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		color: var(--text-muted);
-	}
-
-	.league-picks-hint {
-		margin: 0 0 0.65rem;
-		font-size: 0.78rem;
 	}
 
 	.result-banner {

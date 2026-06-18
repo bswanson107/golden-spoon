@@ -90,19 +90,19 @@
 			title={teamTitle(game.away.id)}
 			onclick={() => handleSelect(game.away.id)}
 		>
-			{#if pickBadge(game.away.id) === 'current'}
-				<span class="pick-marker pick-marker-current">Your pick</span>
-			{:else if pickBadge(game.away.id) === 'other'}
-				<span class="pick-marker pick-marker-other"
-					>Picked WK {pickBadgeOtherWeek(game.away.id)}</span
-				>
-			{/if}
 			<span class="side-label">Away</span>
 			<div class="logo-wrap">
 				<TeamLogo teamCode={game.away.id} size={logoSize} />
 			</div>
 			<span class="team-name">{displayName(game.away.id, game.away.name)}</span>
 			<div class="badges">
+				{#if pickBadge(game.away.id) === 'current'}
+					<span class="pick-marker pick-marker-current">Your pick</span>
+				{:else if pickBadge(game.away.id) === 'other'}
+					<span class="pick-marker pick-marker-other"
+						>Picked WK {pickBadgeOtherWeek(game.away.id)}</span
+					>
+				{/if}
 				{#if game.away_win_pct !== null && isUnderdog(game.away_win_pct, underdogThreshold)}
 					<span class="underdawg-badge">Underdawg · 2 pts</span>
 				{/if}
@@ -119,19 +119,19 @@
 			title={teamTitle(game.home.id)}
 			onclick={() => handleSelect(game.home.id)}
 		>
-			{#if pickBadge(game.home.id) === 'current'}
-				<span class="pick-marker pick-marker-current">Your pick</span>
-			{:else if pickBadge(game.home.id) === 'other'}
-				<span class="pick-marker pick-marker-other"
-					>Picked WK {pickBadgeOtherWeek(game.home.id)}</span
-				>
-			{/if}
 			<span class="side-label">Home</span>
 			<div class="logo-wrap">
 				<TeamLogo teamCode={game.home.id} size={logoSize} />
 			</div>
 			<span class="team-name">{displayName(game.home.id, game.home.name)}</span>
 			<div class="badges">
+				{#if pickBadge(game.home.id) === 'current'}
+					<span class="pick-marker pick-marker-current">Your pick</span>
+				{:else if pickBadge(game.home.id) === 'other'}
+					<span class="pick-marker pick-marker-other"
+						>Picked WK {pickBadgeOtherWeek(game.home.id)}</span
+					>
+				{/if}
 				{#if game.home_win_pct !== null && isUnderdog(game.home_win_pct, underdogThreshold)}
 					<span class="underdawg-badge">Underdawg · 2 pts</span>
 				{/if}
@@ -257,6 +257,8 @@
 		justify-content: center;
 		gap: 0.35rem;
 		min-height: 1.1rem;
+		margin-top: auto;
+		width: 100%;
 	}
 
 	.underdawg-badge {
@@ -270,10 +272,6 @@
 	}
 
 	.pick-marker {
-		position: absolute;
-		top: 0.45rem;
-		right: 0.45rem;
-		z-index: 1;
 		font-size: 0.58rem;
 		font-weight: 800;
 		padding: 0.15rem 0.4rem;
@@ -282,7 +280,6 @@
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 		line-height: 1.2;
-		pointer-events: none;
 	}
 
 	.pick-marker-current {

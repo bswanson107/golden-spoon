@@ -1,3 +1,5 @@
+import type { PickVisibility, TiebreakerMode } from '$lib/leagueRules';
+
 export type League = {
 	id: string;
 	name: string;
@@ -7,6 +9,8 @@ export type League = {
 	is_active: boolean;
 	created_at: string;
 	underdog_threshold_pct: number;
+	tiebreaker_mode: TiebreakerMode;
+	pick_visibility: PickVisibility;
 };
 
 export type LeagueMembership = {

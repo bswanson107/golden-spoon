@@ -1,5 +1,21 @@
+import {
+	DEFAULT_PICK_VISIBILITY,
+	DEFAULT_TIEBREAKER_MODE,
+	DEFAULT_UNDERDOG_THRESHOLD,
+	type PickVisibility,
+	type TiebreakerMode
+} from '$lib/leagueRules';
 import { getSupabase } from '$lib/supabase';
 import type { League, LeagueWithRole } from '$lib/types/league';
+
+export type CreateLeagueRules = {
+	underdogThresholdPct?: number;
+	tiebreakerMode?: TiebreakerMode;
+	pickVisibility?: PickVisibility;
+};
+
+const LEAGUE_SELECT =
+	'id, name, season_year, commissioner_id, invite_code, is_active, created_at, underdog_threshold_pct, tiebreaker_mode, pick_visibility';
 
 function mapMembership(row: {
 	league_id: string;
@@ -29,14 +45,7 @@ export async function fetchMyLeagues(userId: string): Promise<{
 			league_id,
 			joined_at,
 			leagues (
-				id,
-				name,
-				season_year,
-				commissioner_id,
-				invite_code,
-				is_active,
-				created_at,
-				underdog_threshold_pct
+				${LEAGUE_SELECT}
 			)
 		`
 		)
@@ -65,7 +74,8 @@ export async function getPostAuthPath(userId: string, basePath: string): Promise
 
 export async function createLeague(
 	name: string,
-	seasonYear: number
+	seasonYear: number,
+	rules: CreateLeagueRules = {}
 ): Promise<{ league: League | null; error: string | null }> {
 	const supabase = getSupabase();
 	const trimmedName = name.trim();
@@ -84,7 +94,10 @@ export async function createLeague(
 
 	const { data, error } = await supabase.rpc('create_league', {
 		p_name: trimmedName,
-		p_season_year: seasonYear
+		p_season_year: seasonYear,
+		p_underdog_threshold_pct: rules.underdogThresholdPct ?? DEFAULT_UNDERDOG_THRESHOLD,
+		p_tiebreaker_mode: rules.tiebreakerMode ?? DEFAULT_TIEBREAKER_MODE,
+		p_pick_visibility: rules.pickVisibility ?? DEFAULT_PICK_VISIBILITY
 	});
 
 	if (error) {
@@ -92,7 +105,7 @@ export async function createLeague(
 			return {
 				league: null,
 				error:
-					'Create function missing. Run supabase/migrations/003_fix_league_create_rls.sql in Supabase.'
+					'Create function missing. Run supabase/migrations/017_league_rules_v1.sql in Supabase.'
 			};
 		}
 		return { league: null, error: error.message };
@@ -165,7 +178,7 @@ export async function fetchLeague(
 
 	const { data, error } = await supabase
 		.from('leagues')
-		.select('id, name, season_year, commissioner_id, invite_code, is_active, created_at, underdog_threshold_pct')
+		.select(LEAGUE_SELECT)
 		.eq('id', leagueId)
 		.single();
 

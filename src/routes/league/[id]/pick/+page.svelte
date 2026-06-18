@@ -6,14 +6,13 @@
 	import PickWeekPanel from '$lib/components/pick/PickWeekPanel.svelte';
 	import { hasDemoPicks, loadDemoState, resetDemoPicks, saveDemoState } from '$lib/demo';
 	import { fetchLeague } from '$lib/leagues';
+	import { normalizeUnderdogThreshold } from '$lib/leagueRules';
 	import { loadViewWeek, saveViewWeek } from '$lib/pickView';
 	import { fetchUserLeaguePicks, picksByWeek, saveLeaguePick, type UserLeaguePick } from '$lib/picks';
 	import { isDemoSeason } from '$lib/season';
-	import { fetchLeaguePicks, fetchLeaguePickSubmissions, fetchLeagueStandings, type PickSubmissionsByCell } from '$lib/standings';
 	import { syncSeasonIndicatorForLeague } from '$lib/seasonIndicatorStore.svelte';
 	import type { DemoPick, DemoState } from '$lib/types/demo';
 	import type { LeagueWithRole } from '$lib/types/league';
-	import type { LeaguePick, StandingRow } from '$lib/types/standings';
 
 	const auth = useAuth();
 
@@ -21,10 +20,6 @@
 	let demoState = $state<DemoState>({ enabled: false, simulatedWeek: 1, picks: {} });
 	let viewWeek = $state(1);
 	let userPicks = $state<UserLeaguePick[]>([]);
-	let leaguePicks = $state<LeaguePick[]>([]);
-	let standings = $state<StandingRow[]>([]);
-	let pickSubmissions = $state<PickSubmissionsByCell>({});
-	let pickSubmissionsError = $state<string | null>(null);
 	let loading = $state(true);
 	let saving = $state(false);
 	let error = $state<string | null>(null);
@@ -33,6 +28,7 @@
 	const leagueId = $derived($page.params.id);
 	const isDemo = $derived(league !== null && isDemoSeason(league.season_year));
 	const userPicksByWeek = $derived(picksByWeek(userPicks));
+	const underdogThreshold = $derived(normalizeUnderdogThreshold(league?.underdog_threshold_pct));
 
 	$effect(() => {
 		const leagueData = league;
@@ -68,43 +64,16 @@
 				demoState = loadDemoState(id, user.id, result.league.season_year);
 				viewWeek = demoState.simulatedWeek;
 				userPicks = [];
-				leaguePicks = [];
-				standings = [];
 			} else {
 				const loadedViewWeek = loadViewWeek(id, user.id, result.league.season_year);
 				viewWeek = loadedViewWeek;
 				demoState = loadDemoState(id, user.id, result.league.season_year);
-				const [picksResult, leaguePicksResult, standingsResult, submissionsResult] =
-					await Promise.all([
-						fetchUserLeaguePicks(id, user.id),
-						fetchLeaguePicks(id),
-						fetchLeagueStandings(id),
-						fetchLeaguePickSubmissions(id)
-					]);
+				const picksResult = await fetchUserLeaguePicks(id, user.id);
 				if (picksResult.error) {
 					error = picksResult.error;
 					userPicks = [];
 				} else {
 					userPicks = picksResult.picks;
-				}
-				if (leaguePicksResult.error && !error) {
-					error = leaguePicksResult.error;
-					leaguePicks = [];
-				} else if (!leaguePicksResult.error) {
-					leaguePicks = leaguePicksResult.picks;
-				}
-				if (standingsResult.error && !error) {
-					error = standingsResult.error;
-					standings = [];
-				} else if (!standingsResult.error) {
-					standings = standingsResult.standings;
-				}
-				if (submissionsResult.error) {
-					pickSubmissionsError = submissionsResult.error;
-					pickSubmissions = {};
-				} else {
-					pickSubmissionsError = null;
-					pickSubmissions = submissionsResult.byCell;
 				}
 			}
 
@@ -112,37 +81,15 @@
 		});
 	});
 
-	async function reloadLeaguePickData() {
-		const user = auth.user;
-		const id = leagueId;
-		if (!user || !id) return;
-
-		const [picksResult, leaguePicksResult, submissionsResult] = await Promise.all([
-			fetchUserLeaguePicks(id, user.id),
-			fetchLeaguePicks(id),
-			fetchLeaguePickSubmissions(id)
-		]);
-
-		if (!picksResult.error) {
-			userPicks = picksResult.picks;
-		}
-		if (!leaguePicksResult.error) {
-			leaguePicks = leaguePicksResult.picks;
-		}
-		if (submissionsResult.error) {
-			pickSubmissionsError = submissionsResult.error;
-		} else {
-			pickSubmissionsError = null;
-			pickSubmissions = submissionsResult.byCell;
-		}
-	}
-
 	async function reloadUserPicks() {
 		const user = auth.user;
 		const id = leagueId;
 		if (!user || !id) return;
 
-		await reloadLeaguePickData();
+		const picksResult = await fetchUserLeaguePicks(id, user.id);
+		if (!picksResult.error) {
+			userPicks = picksResult.picks;
+		}
 	}
 
 	function persistDemoState(next: DemoState) {
@@ -235,12 +182,6 @@
 			<p class="auth-error pick-error" role="alert">{saveError}</p>
 		{/if}
 
-		{#if pickSubmissionsError}
-			<p class="auth-error pick-error" role="alert">
-				Could not load league pick status: {pickSubmissionsError}
-			</p>
-		{/if}
-
 		<section class="pick-section">
 			<PickWeekPanel
 				mode={isDemo ? 'demo' : 'live'}
@@ -253,10 +194,7 @@
 				onWeekReset={isDemo ? handleResetDemo : undefined}
 				demoState={isDemo ? demoState : null}
 				{userPicksByWeek}
-				leaguePicks={isDemo ? [] : leaguePicks}
-				standings={isDemo ? [] : standings}
-				pickSubmissions={isDemo ? {} : pickSubmissions}
-				currentUserId={auth.user?.id ?? null}
+				{underdogThreshold}
 				{saving}
 				onSavePick={isDemo ? handleSaveDemoPick : handleSaveLivePick}
 			/>

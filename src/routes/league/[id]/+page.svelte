@@ -23,6 +23,11 @@
 	import { fetchWeekGames } from '$lib/games';
 	import { getPickCtaState, getWeekFirstKickoff } from '$lib/leaguePickStatus';
 	import { adminKickLeagueMember, fetchLeague, fetchMyLeagues } from '$lib/leagues';
+	import {
+		normalizeUnderdogThreshold,
+		parsePickVisibility,
+		parseTiebreakerMode
+	} from '$lib/leagueRules';
 	import { fetchLeaguePicks, fetchLeaguePickSubmissions, fetchLeagueStandings, type PickSubmissionsByCell } from '$lib/standings';
 	import { getCurrentWeekFromDate, isDemoSeason } from '$lib/season';
 	import { syncSeasonIndicatorForLeague } from '$lib/seasonIndicatorStore.svelte';
@@ -89,7 +94,8 @@
 				demoState,
 				demoGamesByWeek,
 				user.id,
-				playerDisplayName
+				playerDisplayName,
+				league?.tiebreaker_mode ?? 'fewest_wins'
 			),
 			demoActive: true
 		};
@@ -190,11 +196,9 @@
 		}
 	});
 
-	const rulesThreshold = $derived(
-		league?.underdog_threshold_pct != null
-			? Math.round(Number(league.underdog_threshold_pct))
-			: 33
-	);
+	const rulesThreshold = $derived(normalizeUnderdogThreshold(league?.underdog_threshold_pct));
+	const rulesTiebreakerMode = $derived(parseTiebreakerMode(league?.tiebreaker_mode));
+	const rulesPickVisibility = $derived(parsePickVisibility(league?.pick_visibility));
 
 	function refreshDemoState() {
 		const user = auth.user;
@@ -493,6 +497,7 @@
 				<StandingsTable
 					standings={leagueView.standings}
 					currentUserId={auth.user?.id ?? null}
+					tiebreakerMode={rulesTiebreakerMode}
 					adminKickEnabled={adminKickEnabled}
 					commissionerId={league.commissioner_id}
 					{kickingUserId}
@@ -518,6 +523,7 @@
 					currentUserId={auth.user?.id ?? null}
 					viewWeek={null}
 					{pickSubmissions}
+					pickVisibility={rulesPickVisibility}
 				/>
 			{/if}
 		</section>
@@ -534,6 +540,8 @@
 			leagueName={league.name}
 			seasonYear={league.season_year}
 			threshold={rulesThreshold}
+			tiebreakerMode={rulesTiebreakerMode}
+			pickVisibility={rulesPickVisibility}
 			onClose={() => (rulesOpen = false)}
 		/>
 	{/if}
