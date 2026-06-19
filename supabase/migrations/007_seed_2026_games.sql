@@ -1,4 +1,4 @@
--- Golden Ladle — seed 2026 NFL schedule (dev/test data)
+-- Golden Spoon — seed 2026 NFL schedule (dev/test data)
 -- Generated from data/games_2026.csv
 -- Idempotent: safe to re-run (upserts on espn_event_id / season-week keys).
 -- CSV uses LA for Rams; mapped to LAR to match public.nfl_teams.

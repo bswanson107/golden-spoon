@@ -1,4 +1,4 @@
--- Golden Ladle — seed Scag Family Pool 2025 (dev/test data)
+-- Golden Spoon — seed Scag Family Pool 2025 (dev/test data)
 -- Generated from data/scag_pool_2025.csv + data/games_2025.csv
 -- Prerequisite: run 004_seed_2025_games.sql first.
 -- Idempotent: safe to re-run (deletes and re-inserts picks for seed league).
@@ -20,7 +20,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   '7439c70c-c73e-4eec-af61-d2c7a0996373', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-erik@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-erik@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Erik"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -28,7 +28,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   '7439c70c-c73e-4eec-af61-d2c7a0996373', '7439c70c-c73e-4eec-af61-d2c7a0996373',
-  jsonb_build_object('sub', '7439c70c-c73e-4eec-af61-d2c7a0996373', 'email', 'scag-seed-erik@golden-ladle.test'),
+  jsonb_build_object('sub', '7439c70c-c73e-4eec-af61-d2c7a0996373', 'email', 'scag-seed-erik@golden-spoon.test'),
   'email', '7439c70c-c73e-4eec-af61-d2c7a0996373', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -42,7 +42,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   '56cac38f-d573-482a-a575-6da02e2288cb', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-nick@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-nick@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Nick"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -50,7 +50,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   '56cac38f-d573-482a-a575-6da02e2288cb', '56cac38f-d573-482a-a575-6da02e2288cb',
-  jsonb_build_object('sub', '56cac38f-d573-482a-a575-6da02e2288cb', 'email', 'scag-seed-nick@golden-ladle.test'),
+  jsonb_build_object('sub', '56cac38f-d573-482a-a575-6da02e2288cb', 'email', 'scag-seed-nick@golden-spoon.test'),
   'email', '56cac38f-d573-482a-a575-6da02e2288cb', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -64,7 +64,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   '88ae01d8-7c21-4e95-ad36-1dc27e0e453a', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-trish@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-trish@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Trish"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -72,7 +72,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   '88ae01d8-7c21-4e95-ad36-1dc27e0e453a', '88ae01d8-7c21-4e95-ad36-1dc27e0e453a',
-  jsonb_build_object('sub', '88ae01d8-7c21-4e95-ad36-1dc27e0e453a', 'email', 'scag-seed-trish@golden-ladle.test'),
+  jsonb_build_object('sub', '88ae01d8-7c21-4e95-ad36-1dc27e0e453a', 'email', 'scag-seed-trish@golden-spoon.test'),
   'email', '88ae01d8-7c21-4e95-ad36-1dc27e0e453a', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -86,7 +86,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   'e6c9506e-5c35-46d2-a5dc-7cb94194e588', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-des@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-des@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Des"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -94,7 +94,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   'e6c9506e-5c35-46d2-a5dc-7cb94194e588', 'e6c9506e-5c35-46d2-a5dc-7cb94194e588',
-  jsonb_build_object('sub', 'e6c9506e-5c35-46d2-a5dc-7cb94194e588', 'email', 'scag-seed-des@golden-ladle.test'),
+  jsonb_build_object('sub', 'e6c9506e-5c35-46d2-a5dc-7cb94194e588', 'email', 'scag-seed-des@golden-spoon.test'),
   'email', 'e6c9506e-5c35-46d2-a5dc-7cb94194e588', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -108,7 +108,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   '5e0d1cac-d616-471c-a1f6-3eef7c39a9af', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-dave-swan@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-dave-swan@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Dave Swan"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -116,7 +116,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   '5e0d1cac-d616-471c-a1f6-3eef7c39a9af', '5e0d1cac-d616-471c-a1f6-3eef7c39a9af',
-  jsonb_build_object('sub', '5e0d1cac-d616-471c-a1f6-3eef7c39a9af', 'email', 'scag-seed-dave-swan@golden-ladle.test'),
+  jsonb_build_object('sub', '5e0d1cac-d616-471c-a1f6-3eef7c39a9af', 'email', 'scag-seed-dave-swan@golden-spoon.test'),
   'email', '5e0d1cac-d616-471c-a1f6-3eef7c39a9af', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -130,7 +130,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   'f926ce38-990c-4175-afe9-d3bfec7c0366', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-luke@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-luke@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Luke"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -138,7 +138,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   'f926ce38-990c-4175-afe9-d3bfec7c0366', 'f926ce38-990c-4175-afe9-d3bfec7c0366',
-  jsonb_build_object('sub', 'f926ce38-990c-4175-afe9-d3bfec7c0366', 'email', 'scag-seed-luke@golden-ladle.test'),
+  jsonb_build_object('sub', 'f926ce38-990c-4175-afe9-d3bfec7c0366', 'email', 'scag-seed-luke@golden-spoon.test'),
   'email', 'f926ce38-990c-4175-afe9-d3bfec7c0366', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -152,7 +152,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   '9a6dd50f-42ab-4e37-a501-fe15f502554b', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-nancy@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-nancy@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Nancy"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -160,7 +160,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   '9a6dd50f-42ab-4e37-a501-fe15f502554b', '9a6dd50f-42ab-4e37-a501-fe15f502554b',
-  jsonb_build_object('sub', '9a6dd50f-42ab-4e37-a501-fe15f502554b', 'email', 'scag-seed-nancy@golden-ladle.test'),
+  jsonb_build_object('sub', '9a6dd50f-42ab-4e37-a501-fe15f502554b', 'email', 'scag-seed-nancy@golden-spoon.test'),
   'email', '9a6dd50f-42ab-4e37-a501-fe15f502554b', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -174,7 +174,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   'f3d5b8c9-bddb-471d-a50e-2ddb8fdc938e', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-marcy@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-marcy@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Marcy"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -182,7 +182,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   'f3d5b8c9-bddb-471d-a50e-2ddb8fdc938e', 'f3d5b8c9-bddb-471d-a50e-2ddb8fdc938e',
-  jsonb_build_object('sub', 'f3d5b8c9-bddb-471d-a50e-2ddb8fdc938e', 'email', 'scag-seed-marcy@golden-ladle.test'),
+  jsonb_build_object('sub', 'f3d5b8c9-bddb-471d-a50e-2ddb8fdc938e', 'email', 'scag-seed-marcy@golden-spoon.test'),
   'email', 'f3d5b8c9-bddb-471d-a50e-2ddb8fdc938e', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -196,7 +196,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   '4bd4e5d9-2864-4ccb-a873-c549f8249f25', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-danny@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-danny@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Danny"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -204,7 +204,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   '4bd4e5d9-2864-4ccb-a873-c549f8249f25', '4bd4e5d9-2864-4ccb-a873-c549f8249f25',
-  jsonb_build_object('sub', '4bd4e5d9-2864-4ccb-a873-c549f8249f25', 'email', 'scag-seed-danny@golden-ladle.test'),
+  jsonb_build_object('sub', '4bd4e5d9-2864-4ccb-a873-c549f8249f25', 'email', 'scag-seed-danny@golden-spoon.test'),
   'email', '4bd4e5d9-2864-4ccb-a873-c549f8249f25', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -218,7 +218,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   '85978942-f5a7-4513-ae52-41055b9da732', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-todd@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-todd@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Todd"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -226,7 +226,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   '85978942-f5a7-4513-ae52-41055b9da732', '85978942-f5a7-4513-ae52-41055b9da732',
-  jsonb_build_object('sub', '85978942-f5a7-4513-ae52-41055b9da732', 'email', 'scag-seed-todd@golden-ladle.test'),
+  jsonb_build_object('sub', '85978942-f5a7-4513-ae52-41055b9da732', 'email', 'scag-seed-todd@golden-spoon.test'),
   'email', '85978942-f5a7-4513-ae52-41055b9da732', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -240,7 +240,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   '1dca2d73-65a7-4f28-acda-85dd4675e256', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-ben@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-ben@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Ben"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -248,7 +248,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   '1dca2d73-65a7-4f28-acda-85dd4675e256', '1dca2d73-65a7-4f28-acda-85dd4675e256',
-  jsonb_build_object('sub', '1dca2d73-65a7-4f28-acda-85dd4675e256', 'email', 'scag-seed-ben@golden-ladle.test'),
+  jsonb_build_object('sub', '1dca2d73-65a7-4f28-acda-85dd4675e256', 'email', 'scag-seed-ben@golden-spoon.test'),
   'email', '1dca2d73-65a7-4f28-acda-85dd4675e256', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -262,7 +262,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   'ebc98f93-b328-402f-a31e-4cf89582ae8e', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-grandma@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-grandma@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Grandma"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -270,7 +270,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   'ebc98f93-b328-402f-a31e-4cf89582ae8e', 'ebc98f93-b328-402f-a31e-4cf89582ae8e',
-  jsonb_build_object('sub', 'ebc98f93-b328-402f-a31e-4cf89582ae8e', 'email', 'scag-seed-grandma@golden-ladle.test'),
+  jsonb_build_object('sub', 'ebc98f93-b328-402f-a31e-4cf89582ae8e', 'email', 'scag-seed-grandma@golden-spoon.test'),
   'email', 'ebc98f93-b328-402f-a31e-4cf89582ae8e', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -284,7 +284,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   '44c8d145-65ef-4987-ac97-88e344d428c9', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-sheri@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-sheri@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Sheri"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -292,7 +292,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   '44c8d145-65ef-4987-ac97-88e344d428c9', '44c8d145-65ef-4987-ac97-88e344d428c9',
-  jsonb_build_object('sub', '44c8d145-65ef-4987-ac97-88e344d428c9', 'email', 'scag-seed-sheri@golden-ladle.test'),
+  jsonb_build_object('sub', '44c8d145-65ef-4987-ac97-88e344d428c9', 'email', 'scag-seed-sheri@golden-spoon.test'),
   'email', '44c8d145-65ef-4987-ac97-88e344d428c9', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -306,7 +306,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   '7f865349-1435-488d-aafe-87b0565b8610', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-david-scag@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-david-scag@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"David Scag"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -314,7 +314,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   '7f865349-1435-488d-aafe-87b0565b8610', '7f865349-1435-488d-aafe-87b0565b8610',
-  jsonb_build_object('sub', '7f865349-1435-488d-aafe-87b0565b8610', 'email', 'scag-seed-david-scag@golden-ladle.test'),
+  jsonb_build_object('sub', '7f865349-1435-488d-aafe-87b0565b8610', 'email', 'scag-seed-david-scag@golden-spoon.test'),
   'email', '7f865349-1435-488d-aafe-87b0565b8610', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -328,7 +328,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   'b58e4217-d5df-498d-a488-c49c73033846', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-jackson@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-jackson@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Jackson"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -336,7 +336,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   'b58e4217-d5df-498d-a488-c49c73033846', 'b58e4217-d5df-498d-a488-c49c73033846',
-  jsonb_build_object('sub', 'b58e4217-d5df-498d-a488-c49c73033846', 'email', 'scag-seed-jackson@golden-ladle.test'),
+  jsonb_build_object('sub', 'b58e4217-d5df-498d-a488-c49c73033846', 'email', 'scag-seed-jackson@golden-spoon.test'),
   'email', 'b58e4217-d5df-498d-a488-c49c73033846', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -350,7 +350,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   '0621f100-0b9d-4158-ae0c-40f5455d0b7a', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-katherine@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-katherine@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Katherine"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -358,7 +358,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   '0621f100-0b9d-4158-ae0c-40f5455d0b7a', '0621f100-0b9d-4158-ae0c-40f5455d0b7a',
-  jsonb_build_object('sub', '0621f100-0b9d-4158-ae0c-40f5455d0b7a', 'email', 'scag-seed-katherine@golden-ladle.test'),
+  jsonb_build_object('sub', '0621f100-0b9d-4158-ae0c-40f5455d0b7a', 'email', 'scag-seed-katherine@golden-spoon.test'),
   'email', '0621f100-0b9d-4158-ae0c-40f5455d0b7a', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -372,7 +372,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   '2019ef35-f471-4858-a726-89acc2594138', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-kristen@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-kristen@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Kristen"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -380,7 +380,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   '2019ef35-f471-4858-a726-89acc2594138', '2019ef35-f471-4858-a726-89acc2594138',
-  jsonb_build_object('sub', '2019ef35-f471-4858-a726-89acc2594138', 'email', 'scag-seed-kristen@golden-ladle.test'),
+  jsonb_build_object('sub', '2019ef35-f471-4858-a726-89acc2594138', 'email', 'scag-seed-kristen@golden-spoon.test'),
   'email', '2019ef35-f471-4858-a726-89acc2594138', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 
@@ -394,7 +394,7 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, is_super_admin, confirmation_token
 ) values (
   'c821b559-7cd9-491d-abd3-082c877eeeb8', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-  'scag-seed-ryan@golden-ladle.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
+  'scag-seed-ryan@golden-spoon.test', crypt('seed-not-for-login', gen_salt('bf')), now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{"display_name":"Ryan"}', false, ''
 ) on conflict (id) do nothing;
 
@@ -402,7 +402,7 @@ insert into auth.identities (
   id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
 ) values (
   'c821b559-7cd9-491d-abd3-082c877eeeb8', 'c821b559-7cd9-491d-abd3-082c877eeeb8',
-  jsonb_build_object('sub', 'c821b559-7cd9-491d-abd3-082c877eeeb8', 'email', 'scag-seed-ryan@golden-ladle.test'),
+  jsonb_build_object('sub', 'c821b559-7cd9-491d-abd3-082c877eeeb8', 'email', 'scag-seed-ryan@golden-spoon.test'),
   'email', 'c821b559-7cd9-491d-abd3-082c877eeeb8', now(), now(), now()
 ) on conflict (provider, provider_id) do nothing;
 

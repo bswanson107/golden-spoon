@@ -1,4 +1,4 @@
--- Golden Ladle — commissioner manual game status/score updates
+-- Golden Spoon — commissioner manual game status/score updates
 
 create or replace function public.update_game_status(
   p_league_id uuid,

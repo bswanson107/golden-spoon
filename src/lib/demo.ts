@@ -11,7 +11,7 @@ import type { DemoPick, DemoState, ScoredDemoPick } from '$lib/types/demo';
 import type { WeekGame } from '$lib/types/game';
 import type { LeaguePick, PickOutcome, StandingRow } from '$lib/types/standings';
 
-const STORAGE_PREFIX = 'golden-ladle-demo';
+const STORAGE_PREFIX = 'golden-spoon-demo';
 
 export { DEFAULT_UNDERDOG_THRESHOLD };
 

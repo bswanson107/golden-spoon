@@ -1,4 +1,4 @@
--- Golden Ladle — sync_state table for NFL data sync rate limiting / status
+-- Golden Spoon — sync_state table for NFL data sync rate limiting / status
 
 create table if not exists public.sync_state (
   key text primary key,

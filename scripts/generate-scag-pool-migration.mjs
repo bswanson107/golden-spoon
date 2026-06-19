@@ -302,7 +302,7 @@ function main() {
 	}
 
 	const out = [];
-	out.push(`-- Golden Ladle — seed Scag Family Pool 2025 (dev/test data)`);
+	out.push(`-- Golden Spoon — seed Scag Family Pool 2025 (dev/test data)`);
 	out.push(`-- Generated from data/scag_pool_2025.csv + data/games_2025.csv`);
 	out.push(`-- Prerequisite: run 004_seed_2025_games.sql first.`);
 	out.push(`-- Idempotent: safe to re-run (deletes and re-inserts picks for seed league).`);
@@ -323,7 +323,7 @@ function main() {
 
 	for (const player of players) {
 		const userId = playerUuid(player.displayName);
-		const email = `scag-seed-${slugify(player.displayName)}@golden-ladle.test`;
+		const email = `scag-seed-${slugify(player.displayName)}@golden-spoon.test`;
 		out.push(`insert into auth.users (`);
 		out.push(`  id, instance_id, aud, role, email, encrypted_password,`);
 		out.push(`  email_confirmed_at, created_at, updated_at,`);

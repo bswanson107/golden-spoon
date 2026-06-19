@@ -15,7 +15,7 @@
 </script>
 
 <main class="page">
-	<h1 class="page-title">Golden Ladle</h1>
+	<h1 class="page-title">Golden Spoon</h1>
 
 	{#if auth.loading}
 		<p class="page-subtitle">Checking session…</p>

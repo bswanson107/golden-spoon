@@ -101,15 +101,27 @@
 
 	.standings {
 		width: 100%;
+		table-layout: fixed;
 		border-collapse: collapse;
 		font-size: 0.9rem;
 	}
 
 	th,
 	td {
-		padding: 0.55rem 0.65rem;
+		padding: 0.5rem 0.5rem;
 		text-align: left;
 		border-bottom: 1px solid var(--border);
+		vertical-align: middle;
+	}
+
+	th:first-child,
+	td:first-child {
+		padding-left: 0;
+	}
+
+	th:last-child,
+	td:last-child {
+		padding-right: 0;
 	}
 
 	th {
@@ -120,31 +132,60 @@
 		letter-spacing: 0.04em;
 	}
 
+	th:nth-child(1) {
+		width: 6%;
+	}
+
+	th:nth-child(2) {
+		width: 40%;
+	}
+
+	th:nth-child(3) {
+		width: 18%;
+	}
+
+	th:nth-child(4) {
+		width: 18%;
+	}
+
+	th:nth-child(5) {
+		width: 18%;
+	}
+
 	.num {
 		text-align: right;
 		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
 	}
 
 	.rank {
 		color: var(--text-muted);
-		width: 2rem;
+		text-align: center;
+		padding-right: 0.25rem;
 	}
 
 	.name {
 		font-weight: 500;
-		min-width: 8rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		padding-right: 0.5rem;
 	}
 
 	.name-row {
-		display: inline-flex;
+		display: flex;
 		align-items: center;
 		gap: 0.45rem;
+		min-width: 0;
 	}
 
 	.name-text {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
+		display: block;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		min-width: 0;
+		flex: 1;
 	}
 
 	.kick-btn {
@@ -163,6 +204,7 @@
 		font-weight: 700;
 		cursor: pointer;
 		box-shadow: var(--shadow-sm);
+		flex-shrink: 0;
 	}
 
 	.kick-btn:hover:not(:disabled) {

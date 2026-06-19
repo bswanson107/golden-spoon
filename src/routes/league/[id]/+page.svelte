@@ -21,7 +21,11 @@
 		simulatedWeekLabel
 	} from '$lib/demo';
 	import { fetchWeekGames } from '$lib/games';
-	import { getPickCtaState, getWeekFirstKickoff } from '$lib/leaguePickStatus';
+	import {
+		getGamesStartedCount,
+		getNextUpcomingKickoff,
+		getPickCtaState
+	} from '$lib/leaguePickStatus';
 	import { adminKickLeagueMember, fetchLeague, fetchMyLeagues } from '$lib/leagues';
 	import {
 		normalizeUnderdogThreshold,
@@ -158,11 +162,12 @@
 			};
 		}
 
-		const firstKickoff = getWeekFirstKickoff(games);
+		const nextKickoff = getNextUpcomingKickoff(games) ?? new Date().toISOString();
 		return {
 			kind: 'needs_pick' as const,
 			week,
-			deadlineLabel: firstKickoff ?? new Date().toISOString()
+			nextKickoff,
+			gamesStarted: getGamesStartedCount(games)
 		};
 	});
 
@@ -508,12 +513,6 @@
 
 		<section class="card">
 			<h2 class="card-title">Weekly picks</h2>
-			<p class="muted">
-				Green = win, gray = loss, amber = tie.
-				{#if isDemo}
-					Gold badge "2" = underdawg win.
-				{/if}
-			</p>
 			{#if leagueView.picks.length === 0 && Object.keys(pickSubmissions).length === 0}
 				<p class="muted">No picks yet.</p>
 			{:else}

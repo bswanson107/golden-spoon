@@ -2,7 +2,7 @@ import { browser } from '$app/environment';
 import { clampSimulatedWeek } from '$lib/demo';
 import { getCurrentWeekFromDate } from '$lib/season';
 
-const VIEW_WEEK_PREFIX = 'golden-ladle-view-week';
+const VIEW_WEEK_PREFIX = 'golden-spoon-view-week';
 
 function viewWeekKey(leagueId: string, userId: string): string {
 	return `${VIEW_WEEK_PREFIX}:${leagueId}:${userId}`;

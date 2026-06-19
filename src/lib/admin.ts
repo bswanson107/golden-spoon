@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 
-const ADMIN_MODE_KEY = 'golden-ladle-admin-mode';
+const ADMIN_MODE_KEY = 'golden-spoon-admin-mode';
 const ADMIN_EMAIL_LOCAL_PART = 'bswanson107';
 
 export function isAppAdmin(email: string | null | undefined): boolean {

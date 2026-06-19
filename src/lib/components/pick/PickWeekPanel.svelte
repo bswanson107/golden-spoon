@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import GameCard from '$lib/components/pick/GameCard.svelte';
+	import GameTableView from '$lib/components/pick/GameTableView.svelte';
 	import TeamLogo from '$lib/components/TeamLogo.svelte';
 	import WeekNavigator from '$lib/components/pick/WeekNavigator.svelte';
 	import { DEFAULT_UNDERDOG_THRESHOLD } from '$lib/leagueRules';
@@ -54,10 +56,24 @@
 	let priorWeekGames = $state<WeekGame[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
-	let pendingPick = $state<DemoPick | null>(null);
 	let reuseConfirm = $state<{ pick: DemoPick; clearWeek: number } | null>(null);
 	let lastSyncAt = $state<string | null>(null);
 	let syncNotice = $state<string | null>(null);
+
+	const VIEW_MODE_KEY = 'golden-spoon-pick-view';
+	type ViewMode = 'card' | 'table';
+
+	function readViewMode(): ViewMode {
+		if (!browser) return 'card';
+		return localStorage.getItem(VIEW_MODE_KEY) === 'table' ? 'table' : 'card';
+	}
+
+	let viewMode = $state<ViewMode>(readViewMode());
+
+	function setViewMode(mode: ViewMode) {
+		viewMode = mode;
+		if (browser) localStorage.setItem(VIEW_MODE_KEY, mode);
+	}
 
 	const activeWeek = $derived(viewWeek);
 
@@ -86,7 +102,7 @@
 	});
 
 	const pickingEnabled = $derived(
-		mode === 'demo' ? weekOpen && !pickSubmitted : canChangeLivePick
+		mode === 'demo' ? weekOpen : canChangeLivePick
 	);
 
 	const showResults = $derived.by(() => {
@@ -98,10 +114,10 @@
 		return game?.status === 'final';
 	});
 
-	const displayTeamId = $derived(pendingPick?.team_id ?? currentPick?.team_id ?? null);
+	const displayTeamId = $derived(currentPick?.team_id ?? null);
 
-	const showSubmitButton = $derived(
-		pickingEnabled && games.length > 0 && !(mode === 'live' && liveCurrentPick !== null)
+	const canChangePick = $derived(
+		mode === 'live' ? canChangeLivePick : weekOpen
 	);
 
 	const usageMap = $derived.by(() => {
@@ -181,7 +197,6 @@
 
 	$effect(() => {
 		activeWeek;
-		pendingPick = null;
 		reuseConfirm = null;
 	});
 
@@ -191,7 +206,6 @@
 		} else {
 			userPicksByWeek;
 		}
-		pendingPick = null;
 	});
 
 	const syncTimeLabel = $derived(formatSyncTimeAgo(lastSyncAt));
@@ -262,15 +276,14 @@
 		})();
 	});
 
-	function applyPendingPick(pick: DemoPick, clearWeek: number | null) {
+	function savePick(pick: DemoPick, clearWeek: number | null) {
 		const options = clearWeek !== null ? { clearWeek } : undefined;
 		void onSavePick(activeWeek, pick, options);
-		pendingPick = null;
 		reuseConfirm = null;
 	}
 
 	function handleSelectTeam(game: WeekGame, teamId: string) {
-		if (!pickingEnabled) return;
+		if (!pickingEnabled || saving) return;
 		const pick = buildDemoPick(game, teamId, underdogThreshold, mode === 'live');
 		if (!pick) return;
 
@@ -280,32 +293,12 @@
 			return;
 		}
 
-		// Live mode: changing an existing pick saves immediately (still editable until kickoff)
-		if (mode === 'live' && liveCurrentPick) {
-			pendingPick = null;
-			void onSavePick(activeWeek, pick);
-			return;
-		}
-
-		pendingPick = pick;
-	}
-
-	function handleSubmitPick() {
-		if (!pendingPick || saving) return;
-		if (mode === 'demo' && pickSubmitted) return;
-
-		const usedWeek = usageMap.get(pendingPick.team_id);
-		if (usedWeek !== undefined) {
-			reuseConfirm = { pick: pendingPick, clearWeek: usedWeek };
-			return;
-		}
-
-		applyPendingPick(pendingPick, null);
+		savePick(pick, null);
 	}
 
 	function confirmReuse() {
 		if (!reuseConfirm) return;
-		applyPendingPick(reuseConfirm.pick, reuseConfirm.clearWeek);
+		savePick(reuseConfirm.pick, reuseConfirm.clearWeek);
 	}
 
 	function cancelReuse() {
@@ -317,35 +310,52 @@
 	<p class="muted">Demo mode is unavailable for this season.</p>
 {:else}
 	<div class="pick-sticky-bar">
-		<WeekNavigator
-			{viewWeek}
-			onWeekChange={onWeekChange}
-			label={weekNavLabel}
-			compact
-			showReset={showWeekReset}
-			canReset={canWeekReset}
-			onReset={onWeekReset}
-		/>
+		<div class="sticky-top-row">
+			<WeekNavigator
+				{viewWeek}
+				onWeekChange={onWeekChange}
+				label={weekNavLabel}
+				compact
+				showReset={showWeekReset}
+				canReset={canWeekReset}
+				onReset={onWeekReset}
+			/>
+			<div class="view-toggle" role="group" aria-label="Game display">
+				<div class="view-track" class:is-table={viewMode === 'table'}>
+					<span class="view-thumb" aria-hidden="true"></span>
+					<button
+						type="button"
+						class="view-option"
+						class:active={viewMode === 'card'}
+						onclick={() => setViewMode('card')}
+						aria-pressed={viewMode === 'card'}
+					>Card View</button>
+					<button
+						type="button"
+						class="view-option"
+						class:active={viewMode === 'table'}
+						onclick={() => setViewMode('table')}
+						aria-pressed={viewMode === 'table'}
+					>Table View</button>
+				</div>
+			</div>
+		</div>
 
 		{#if !loading && !error}
 			<div class="pick-toolbar">
 				<div
 					class="pick-status"
-					class:status-submitted={pickSubmitted && !pendingPick}
-					class:status-ready={pendingPick !== null}
-					class:status-needed={pickingEnabled && !pickSubmitted && !pendingPick}
+					class:status-submitted={pickSubmitted}
+					class:status-needed={!pickSubmitted && pickingEnabled}
 					class:status-locked={!pickingEnabled && pickSubmitted}
 				>
-					{#if pendingPick}
+					{#if saving}
 						<span class="status-indicator ready" aria-hidden="true"></span>
-						<span class="status-text">
-							Ready to submit · <strong>{pendingPick.team_abbreviation}</strong>
-							<span class="status-meta">({formatWinPct(pendingPick.win_pct_at_pick)})</span>
-						</span>
+						<span class="status-text">Saving pick…</span>
 					{:else if pickSubmitted && currentPick}
 						<TeamLogo teamCode={currentPick.team_id} size={22} />
 						<span class="status-text">
-							{#if mode === 'live' && canChangeLivePick}
+							{#if canChangePick}
 								Current pick · <strong>{currentPick.team_abbreviation}</strong>
 							{:else}
 								Pick submitted · <strong>{currentPick.team_abbreviation}</strong>
@@ -357,7 +367,7 @@
 						{/if}
 					{:else if pickingEnabled}
 						<span class="status-indicator needed" aria-hidden="true"></span>
-						<span class="status-text">Pick not submitted — choose a team below</span>
+						<span class="status-text">Choose a team below</span>
 					{:else if mode === 'demo' && !weekOpen}
 						<span class="status-indicator locked" aria-hidden="true"></span>
 						<span class="status-text">This week is closed</span>
@@ -366,24 +376,7 @@
 						<span class="status-text">No pick for Week {activeWeek}</span>
 					{/if}
 				</div>
-
-				{#if showSubmitButton}
-					<button
-						type="button"
-						class="btn btn-primary btn-sm submit-pick-btn"
-						disabled={!pendingPick || saving}
-						onclick={handleSubmitPick}
-					>
-						{#if saving}
-							Saving…
-						{:else if pendingPick}
-							Submit · {pendingPick.team_abbreviation}
-						{:else}
-							Submit pick
-						{/if}
-					</button>
-			{/if}
-		</div>
+			</div>
 		{:else if loading && mode === 'live'}
 			<div class="pick-toolbar pick-toolbar-loading">
 				<span class="muted">Refreshing odds and scores…</span>
@@ -429,10 +422,10 @@
 			</div>
 		{/if}
 
-		{#if pickSubmitted && !showResults && mode === 'demo'}
-			<p class="hint muted">Time travel forward to see how you did.</p>
-		{:else if pickSubmitted && !showResults && mode === 'live' && canChangeLivePick}
+		{#if pickSubmitted && !showResults && canChangePick}
 			<p class="hint muted">Tap another team to change your pick — you can change until kickoff.</p>
+		{:else if pickSubmitted && !showResults && mode === 'demo' && !weekOpen}
+			<p class="hint muted">Time travel forward to see how you did.</p>
 		{:else if pickSubmitted && !showResults && mode === 'live' && !canChangeLivePick}
 			<p class="hint muted">Result pending — check back after the game.</p>
 		{/if}
@@ -451,12 +444,24 @@
 
 		{#if games.length === 0}
 			<p class="muted">No games found for Week {activeWeek}.</p>
+		{:else if viewMode === 'table'}
+			<GameTableView
+				{games}
+				selectedTeamId={displayTeamId}
+				isSubmittedPickGameId={pickSubmitted && currentPick?.game_id ? currentPick.game_id : null}
+				teamUsageByWeek={usageMap}
+				{activeWeek}
+				{pickingEnabled}
+				{underdogThreshold}
+				onSelectTeam={(game, teamId) => handleSelectTeam(game, teamId)}
+			/>
 		{:else}
 			<div class="games-list">
 				{#each games as game (game.id)}
 					<GameCard
 						{game}
 						selectedTeamId={displayTeamId}
+						isSubmittedPick={pickSubmitted && currentPick?.game_id === game.id}
 						teamUsageByWeek={usageMap}
 						{activeWeek}
 						{pickingEnabled}
@@ -530,6 +535,70 @@
 		-webkit-backdrop-filter: blur(8px);
 		border: none;
 		box-shadow: none;
+	}
+
+	.sticky-top-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+
+	.view-toggle {
+		flex-shrink: 0;
+	}
+
+	.view-track {
+		position: relative;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		padding: 0.2rem;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--text-muted) 14%, var(--surface-2));
+		box-shadow: inset 0 1px 2px color-mix(in srgb, var(--text) 8%, transparent);
+	}
+
+	.view-thumb {
+		position: absolute;
+		top: 0.2rem;
+		bottom: 0.2rem;
+		left: 0.2rem;
+		width: calc(50% - 0.2rem);
+		border-radius: 999px;
+		background: var(--surface);
+		box-shadow:
+			0 1px 2px color-mix(in srgb, var(--text) 12%, transparent),
+			0 1px 4px color-mix(in srgb, var(--text) 8%, transparent);
+		transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+		pointer-events: none;
+	}
+
+	.view-track.is-table .view-thumb {
+		transform: translateX(100%);
+	}
+
+	.view-option {
+		position: relative;
+		z-index: 1;
+		padding: 0.35rem 0.7rem;
+		font-size: 0.72rem;
+		font-weight: 600;
+		font-family: var(--font-body);
+		border: none;
+		background: transparent;
+		color: var(--text-muted);
+		cursor: pointer;
+		white-space: nowrap;
+		transition: color 0.2s ease;
+	}
+
+	.view-option.active {
+		color: var(--text);
+		font-weight: 700;
+	}
+
+	.view-option:not(.active):hover {
+		color: var(--text);
 	}
 
 	.pick-toolbar {
@@ -693,15 +762,6 @@
 		color: var(--brand);
 	}
 
-	.submit-pick-btn {
-		flex-shrink: 0;
-		white-space: nowrap;
-	}
-
-	.submit-pick-btn:hover:not(:disabled) {
-		filter: brightness(1.05);
-	}
-
 	.games-list {
 		display: flex;
 		flex-direction: column;
@@ -780,11 +840,6 @@
 		.pick-toolbar {
 			flex-direction: column;
 			align-items: stretch;
-		}
-
-		.submit-pick-btn {
-			width: 100%;
-			padding: 0.65rem 0.85rem;
 		}
 	}
 </style>

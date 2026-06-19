@@ -1,6 +1,6 @@
 export type Theme = 'dark' | 'light';
 
-const STORAGE_KEY = 'golden-ladle-theme';
+const STORAGE_KEY = 'golden-spoon-theme';
 
 function readStoredTheme(): Theme {
 	if (typeof localStorage === 'undefined') return 'dark';

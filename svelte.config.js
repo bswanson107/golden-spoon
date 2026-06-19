@@ -1,6 +1,6 @@
 import adapter from '@sveltejs/adapter-static';
 
-/** GitHub project site: https://<user>.github.io/golden-ladle/ */
+/** GitHub project site: https://<user>.github.io/golden-spoon/ */
 const githubPages = process.env.GITHUB_PAGES === 'true';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -13,7 +13,7 @@ const config = {
             fallback: 'index.html'
         }),
         paths: {
-            base: githubPages ? '/golden-ladle' : ''
+            base: githubPages ? '/golden-spoon' : ''
         },
         prerender: {
             // Dynamic routes like /league/[id] are handled client-side via SPA fallback

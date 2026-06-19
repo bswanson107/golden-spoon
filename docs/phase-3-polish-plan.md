@@ -2,7 +2,7 @@
 
 ## Goal
 
-Make Golden Ladle feel like a finished product for family members who are not
+Make Golden Spoon feel like a finished product for family members who are not
 tech-savvy and may check it only once a week. Phase 3 covers three areas:
 (1) in-app rules and onboarding so nobody asks "how does scoring work?",
 (2) pick grid UX improvements that make secrecy and missing picks legible at a

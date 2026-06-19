@@ -103,7 +103,7 @@
 	.win-pct-values {
 		display: flex;
 		align-items: baseline;
-		min-height: 1rem;
+		min-height: 1.15rem;
 	}
 
 	.value-segment {
@@ -127,11 +127,11 @@
 	}
 
 	.team-pct {
-		font-size: 0.78rem;
-		font-weight: 600;
+		font-size: 0.88rem;
+		font-weight: 700;
 		font-variant-numeric: tabular-nums;
-		color: var(--text-muted);
-		line-height: 1;
+		color: var(--text);
+		line-height: 1.25;
 		white-space: nowrap;
 	}
 

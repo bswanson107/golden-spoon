@@ -55,7 +55,7 @@
 		});
 		const allWeeks = [...new Set([...fromPicks, ...fromSubmissions])]
 			.filter((week) => week > 0)
-			.sort((a, b) => b - a);
+			.sort((a, b) => a - b);
 
 		if (viewWeek !== null && viewWeek > 0) {
 			return [viewWeek];
@@ -208,7 +208,6 @@
 	<span class="legend-ring ring-win"></span> win ·
 	<span class="legend-ring ring-loss"></span> loss ·
 	<span class="legend-ring ring-tie"></span> tie ·
-	<span class="legend-ring ring-pending"></span> pending ·
 	{#if !picksAreOpen}
 		<span class="legend-ring ring-hidden"><span class="legend-lock">🔒</span></span> hidden pick ·
 	{/if}

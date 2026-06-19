@@ -94,7 +94,7 @@ export function generateGamesMigration({
 	const teams = nflTeamsFromGames(games);
 
 	const out = [];
-	out.push(`-- Golden Ladle — seed ${seasonYear} NFL schedule (dev/test data)`);
+	out.push(`-- Golden Spoon — seed ${seasonYear} NFL schedule (dev/test data)`);
 	out.push(`-- Generated from ${csvPath}`);
 	out.push('-- Idempotent: safe to re-run (upserts on espn_event_id / season-week keys).');
 	out.push('-- CSV uses LA for Rams; mapped to LAR to match public.nfl_teams.');

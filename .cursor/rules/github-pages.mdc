@@ -6,12 +6,12 @@ alwaysApply: false
 
 # GitHub Pages routing
 
-Production is deployed to a project site with base path `/golden-ladle` (`GITHUB_PAGES=true` in CI). Local dev uses an empty base.
+Production is deployed to a project site with base path `/golden-spoon` (`GITHUB_PAGES=true` in CI). Local dev uses an empty base.
 
 - Import `base` from `$app/paths` for `<a href>` attributes: `href="{base}/leagues"`.
 - Use `` goto(`${base}/path`) `` for programmatic navigation — bare `goto('/')` resolves to the domain root and 404s on GitHub Pages.
-- For auth/route guards, use `$page.route.id` (e.g. `/login`), not `$page.url.pathname` (e.g. `/golden-ladle/login`).
-- `svelte.config.js` sets `paths.base`; do not hardcode `/golden-ladle` in source — always use `{base}`.
+- For auth/route guards, use `$page.route.id` (e.g. `/login`), not `$page.url.pathname` (e.g. `/golden-spoon/login`).
+- `svelte.config.js` sets `paths.base`; do not hardcode `/golden-spoon` in source — always use `{base}`.
 
 ## Examples
 

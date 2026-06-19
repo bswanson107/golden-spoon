@@ -1,4 +1,4 @@
--- Golden Ladle — missed pick support + trigger bypass for automated missed inserts
+-- Golden Spoon — missed pick support + trigger bypass for automated missed inserts
 
 alter table public.picks
   add column if not exists is_missed boolean not null default false;

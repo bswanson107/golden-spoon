@@ -7,7 +7,7 @@
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import type { Session } from '@supabase/supabase-js';
-	import ladleFavicon from '$lib/assets/ladleFavicon.png';
+	import spoonFavicon from '$lib/assets/spoonFavicon.png';
 	import { AUTH_CONTEXT_KEY, ADMIN_CONTEXT_KEY, type AuthStore, type AdminStore } from '$lib/auth';
 	import { getSupabase } from '$lib/supabase';
 	import { isAppAdmin, loadAdminMode, saveAdminMode } from '$lib/admin';
@@ -149,12 +149,12 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={ladleFavicon} type="image/png" />
+	<link rel="icon" href={spoonFavicon} type="image/png" />
 </svelte:head>
 
 <div class="app">
 	<header class="header chrome-bar">
-		<a href="{base}/" class="brand">Golden Ladle</a>
+		<a href="{base}/" class="brand">Golden Spoon</a>
 
 		<div class="header-actions">
 			{#if seasonTooltip}

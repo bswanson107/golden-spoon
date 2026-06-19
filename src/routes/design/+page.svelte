@@ -25,7 +25,7 @@
 </script>
 
 <svelte:head>
-	<title>Design demo — Golden Ladle</title>
+	<title>Design demo — Golden Spoon</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
 	<link
@@ -48,7 +48,7 @@
 
 	<main class="canvas">
 		<section class="float-block hero-block">
-			<p class="eyebrow">Golden Ladle · draft 1</p>
+			<p class="eyebrow">Golden Spoon · draft 1</p>
 			<h1 class="display">Pick bold.<br /><span class="display-accent">Score loud.</span></h1>
 			<p class="lead">
 				Hard contrast, soft offset shadows, components floating in open space. Mostly neutral

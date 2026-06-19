@@ -197,6 +197,16 @@ export function formatGameKickoffShort(kickoffAt: string): string {
 	}).format(new Date(kickoffAt));
 }
 
+/** Compact table kickoff, e.g. "Thu 8:20 PM" (no timezone). */
+export function formatGameKickoffTable(kickoffAt: string): string {
+	return new Intl.DateTimeFormat('en-US', {
+		timeZone: ET_TIMEZONE,
+		weekday: 'short',
+		hour: 'numeric',
+		minute: '2-digit'
+	}).format(new Date(kickoffAt));
+}
+
 /** Pick deadline label, e.g. "Thu, Sep 11 · 8:20 PM ET" */
 export function formatPickDeadline(kickoffIso: string): string {
 	const formatted = new Intl.DateTimeFormat('en-US', {

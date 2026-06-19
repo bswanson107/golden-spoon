@@ -1,4 +1,4 @@
--- Golden Ladle — initial schema (paste into Supabase SQL Editor)
+-- Golden Spoon — initial schema (paste into Supabase SQL Editor)
 -- Run as a single script. Safe to re-run only on a fresh project; drops are not included.
 --
 -- Encodes: docs/mvp-rules.md

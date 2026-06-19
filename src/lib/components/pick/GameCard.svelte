@@ -9,6 +9,7 @@
 	let {
 		game,
 		selectedTeamId = null,
+		isSubmittedPick = false,
 		teamUsageByWeek = new Map<string, number>(),
 		activeWeek = 1,
 		pickingEnabled = true,
@@ -18,6 +19,7 @@
 	}: {
 		game: WeekGame;
 		selectedTeamId?: string | null;
+		isSubmittedPick?: boolean;
 		teamUsageByWeek?: Map<string, number>;
 		activeWeek?: number;
 		pickingEnabled?: boolean;
@@ -84,6 +86,7 @@
 			type="button"
 			class="team-side away {teamState(game.away.id)}"
 			class:is-picked={selectedTeamId === game.away.id}
+			class:is-submitted-pick={isSubmittedPick && selectedTeamId === game.away.id}
 			data-team-id={game.away.id}
 			style:--team-tint={getTeamSurfaceTint(game.away.id)}
 			disabled={teamState(game.away.id) === 'locked'}
@@ -113,6 +116,7 @@
 			type="button"
 			class="team-side home {teamState(game.home.id)}"
 			class:is-picked={selectedTeamId === game.home.id}
+			class:is-submitted-pick={isSubmittedPick && selectedTeamId === game.home.id}
 			data-team-id={game.home.id}
 			style:--team-tint={getTeamSurfaceTint(game.home.id)}
 			disabled={teamState(game.home.id) === 'locked'}
@@ -212,6 +216,23 @@
 			color-mix(in srgb, var(--team-tint, var(--text-muted)) 25%, var(--surface))
 		);
 		box-shadow: var(--shadow);
+	}
+
+	.team-side.is-submitted-pick {
+		border: 2px solid var(--brand);
+		box-shadow: var(--shadow), 0 0 0 1px color-mix(in srgb, var(--brand) 35%, transparent);
+	}
+
+	:global([data-theme='light']) .team-side.is-submitted-pick {
+		border: 3px solid #9a7418;
+		background: color-mix(
+			in srgb,
+			#d4a72c 32%,
+			color-mix(in srgb, var(--team-tint, var(--text-muted)) 18%, var(--surface))
+		);
+		box-shadow:
+			var(--shadow-lg),
+			0 0 0 2px color-mix(in srgb, #9a7418 28%, transparent);
 	}
 
 	.team-side.used-elsewhere {

@@ -1,4 +1,4 @@
-# Golden Ladle Supabase project config
+# Golden Spoon Supabase project config
 
 [functions.sync-nfl-data]
 verify_jwt = true

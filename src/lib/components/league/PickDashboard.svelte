@@ -4,7 +4,7 @@
 	import WinPctBar from '$lib/components/pick/WinPctBar.svelte';
 	import TeamLogo from '$lib/components/TeamLogo.svelte';
 	import { formatPoints, outcomeLabel } from '$lib/demo';
-	import { formatPickDeadline } from '$lib/gameKickoff';
+	import PickKickoffCountdown from '$lib/components/league/PickKickoffCountdown.svelte';
 	import type { PickCtaState } from '$lib/leaguePickStatus';
 	import type { WeekGame } from '$lib/types/game';
 	import type { LeaguePick } from '$lib/types/standings';
@@ -60,12 +60,14 @@
 		<div class="action-body">
 			<p class="action-eyebrow">Week {week}</p>
 			<h2 id="pick-action-heading" class="action-title">Make your pick</h2>
+			<PickKickoffCountdown kickoffAt={pickCta.nextKickoff} />
 			<p class="action-copy">
-				Choose a team before the first kickoff this week. You can change it anytime until then.
+				{#if pickCta.gamesStarted > 0}
+					Some games started — pick from what's left before each kickoff.
+				{:else}
+					Pick any game before it kicks off.
+				{/if}
 			</p>
-			{#if pickCta.deadlineLabel}
-				<p class="action-deadline">Deadline: {formatPickDeadline(pickCta.deadlineLabel)}</p>
-			{/if}
 		</div>
 		<a href={pickUrl} class="btn btn-primary">Pick now →</a>
 	</section>
@@ -194,17 +196,10 @@
 	}
 
 	.action-copy {
-		margin: 0 0 0.5rem;
-		font-size: 0.95rem;
+		margin: 0.55rem 0 0;
+		font-size: 0.9rem;
 		color: var(--text-muted);
 		max-width: 36rem;
-	}
-
-	.action-deadline {
-		margin: 0;
-		font-size: 0.88rem;
-		font-weight: 600;
-		color: var(--text);
 	}
 
 	.dashboard-pick {

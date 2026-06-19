@@ -44,9 +44,27 @@ export function hasWeekClosed(games: WeekGame[], now = Date.now()): boolean {
 	return last !== null && new Date(last).getTime() <= now;
 }
 
+/** Games whose kickoff has already passed. */
+export function getGamesStartedCount(games: WeekGame[], now = Date.now()): number {
+	return games.filter((game) => new Date(game.kickoff_at).getTime() <= now).length;
+}
+
+/** Earliest kickoff still in the future (next pickable game). */
+export function getNextUpcomingKickoff(games: WeekGame[], now = Date.now()): string | null {
+	const upcoming = games
+		.filter((game) => new Date(game.kickoff_at).getTime() > now)
+		.sort((a, b) => a.kickoff_at.localeCompare(b.kickoff_at));
+
+	return upcoming[0]?.kickoff_at ?? null;
+}
+
+export function hasPickableGames(games: WeekGame[], now = Date.now()): boolean {
+	return getNextUpcomingKickoff(games, now) !== null;
+}
+
 export type PickCtaState =
 	| { kind: 'hidden' }
-	| { kind: 'needs_pick'; week: number; deadlineLabel: string }
+	| { kind: 'needs_pick'; week: number; nextKickoff: string; gamesStarted: number }
 	| { kind: 'submitted'; week: number; changeable: boolean; teamAbbreviation?: string }
 	| { kind: 'closed'; week: number };
 
@@ -60,29 +78,26 @@ export function getPickCtaState(
 		return { kind: 'hidden' };
 	}
 
-	if (hasWeekStarted(games, now)) {
-		return { kind: 'closed', week: weekNumber };
-	}
+	if (userPick) {
+		const kickedOff = new Date(userPick.kickoff_at).getTime() <= now;
 
-	const firstKickoff = getWeekFirstKickoff(games);
-	if (!firstKickoff) {
-		return { kind: 'hidden' };
-	}
-
-	if (!userPick) {
 		return {
-			kind: 'needs_pick',
+			kind: 'submitted',
 			week: weekNumber,
-			deadlineLabel: firstKickoff
+			changeable: !kickedOff,
+			teamAbbreviation: kickedOff ? userPick.team_abbreviation : undefined
 		};
 	}
 
-	const kickedOff = new Date(userPick.kickoff_at).getTime() <= now;
+	const nextKickoff = getNextUpcomingKickoff(games, now);
+	if (!nextKickoff) {
+		return { kind: 'closed', week: weekNumber };
+	}
 
 	return {
-		kind: 'submitted',
+		kind: 'needs_pick',
 		week: weekNumber,
-		changeable: !kickedOff,
-		teamAbbreviation: kickedOff ? userPick.team_abbreviation : undefined
+		nextKickoff,
+		gamesStarted: getGamesStartedCount(games, now)
 	};
 }
