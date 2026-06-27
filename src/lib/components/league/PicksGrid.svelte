@@ -1,5 +1,6 @@
 <script lang="ts">
 	import TeamLogo from '$lib/components/TeamLogo.svelte';
+	import { qaNow } from '$lib/qaClock.svelte';
 	import {
 		type PickVisibility,
 		DEFAULT_PICK_VISIBILITY,
@@ -21,6 +22,7 @@
 		standings = [],
 		currentUserId = null,
 		viewWeek = null,
+		maxWeek = null,
 		pickSubmissions = {},
 		pickVisibility = DEFAULT_PICK_VISIBILITY
 	}: {
@@ -28,6 +30,8 @@
 		standings?: { user_id: string; display_name: string; standing_rank: number }[];
 		currentUserId?: string | null;
 		viewWeek?: number | null;
+		/** When set (and viewWeek is null), show weeks 1..maxWeek inclusive. */
+		maxWeek?: number | null;
 		/** `${userId}:${weekNumber}` → submission status for hidden picks. */
 		pickSubmissions?: PickSubmissionsByCell;
 		pickVisibility?: PickVisibility | string;
@@ -38,7 +42,7 @@
 
 	const LOGO_SIZE = 24;
 
-	const now = Date.now();
+	const now = $derived(qaNow());
 	const normalizedCurrentUserId = $derived(
 		currentUserId ? normalizePickUserId(currentUserId) : null
 	);
@@ -59,6 +63,10 @@
 
 		if (viewWeek !== null && viewWeek > 0) {
 			return [viewWeek];
+		}
+
+		if (maxWeek !== null && maxWeek > 0) {
+			return Array.from({ length: maxWeek }, (_, i) => i + 1);
 		}
 
 		return allWeeks;
@@ -97,11 +105,12 @@
 		const displays = new Map<string, CellDisplay>();
 
 		for (const player of players) {
+			const isOwn = player.userId === normalizedCurrentUserId;
 			for (const week of weeks) {
 				const key = pickSubmissionKey(player.userId, week);
 				const pick = player.picks.get(week);
 				const submission = pickSubmissions[key];
-				displays.set(key, cellDisplay(pick, submission, resolvedPickVisibility));
+				displays.set(key, cellDisplay(pick, submission, resolvedPickVisibility, isOwn));
 			}
 		}
 
@@ -130,7 +139,8 @@
 	function cellDisplay(
 		pick: LeaguePick | undefined,
 		submission: WeekPickSubmissionStatus | undefined,
-		visibility: PickVisibility
+		visibility: PickVisibility,
+		isOwn: boolean
 	): CellDisplay {
 		if (pick?.is_missed || pick?.outcome === 'missed' || submission === 'missed') return 'missed';
 
@@ -138,6 +148,8 @@
 		if (!hasSubmitted) return 'empty';
 
 		if (pick) {
+			// You can always see your own pick.
+			if (isOwn) return 'visible';
 			if (isOpenPickVisibility(visibility)) return 'visible';
 			const kickedOff = new Date(pick.kickoff_at).getTime() <= now;
 			if (kickedOff) return 'visible';
@@ -224,8 +236,7 @@
 		border-collapse: separate;
 		border-spacing: 0;
 		font-size: 0.8rem;
-		min-width: max-content;
-		width: 100%;
+		width: auto;
 	}
 
 	th,
@@ -264,6 +275,12 @@
 	.week-col {
 		width: 2.75rem;
 		min-width: 2.75rem;
+	}
+
+	/* Gap between the sticky player name column and the first week column */
+	.player-col + .week-col,
+	.player-col + .pick-cell {
+		padding-left: 2rem;
 	}
 
 	.pick-cell {

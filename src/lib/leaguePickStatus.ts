@@ -1,3 +1,4 @@
+import { qaNow } from '$lib/qaClock.svelte';
 import type { WeekGame } from '$lib/types/game';
 import type { LeaguePick, StandingRow } from '$lib/types/standings';
 
@@ -34,23 +35,23 @@ export function getWeekLastKickoff(games: WeekGame[]): string | null {
 	);
 }
 
-export function hasWeekStarted(games: WeekGame[], now = Date.now()): boolean {
+export function hasWeekStarted(games: WeekGame[], now = qaNow()): boolean {
 	const first = getWeekFirstKickoff(games);
 	return first !== null && new Date(first).getTime() <= now;
 }
 
-export function hasWeekClosed(games: WeekGame[], now = Date.now()): boolean {
+export function hasWeekClosed(games: WeekGame[], now = qaNow()): boolean {
 	const last = getWeekLastKickoff(games);
 	return last !== null && new Date(last).getTime() <= now;
 }
 
 /** Games whose kickoff has already passed. */
-export function getGamesStartedCount(games: WeekGame[], now = Date.now()): number {
+export function getGamesStartedCount(games: WeekGame[], now = qaNow()): number {
 	return games.filter((game) => new Date(game.kickoff_at).getTime() <= now).length;
 }
 
 /** Earliest kickoff still in the future (next pickable game). */
-export function getNextUpcomingKickoff(games: WeekGame[], now = Date.now()): string | null {
+export function getNextUpcomingKickoff(games: WeekGame[], now = qaNow()): string | null {
 	const upcoming = games
 		.filter((game) => new Date(game.kickoff_at).getTime() > now)
 		.sort((a, b) => a.kickoff_at.localeCompare(b.kickoff_at));
@@ -58,7 +59,7 @@ export function getNextUpcomingKickoff(games: WeekGame[], now = Date.now()): str
 	return upcoming[0]?.kickoff_at ?? null;
 }
 
-export function hasPickableGames(games: WeekGame[], now = Date.now()): boolean {
+export function hasPickableGames(games: WeekGame[], now = qaNow()): boolean {
 	return getNextUpcomingKickoff(games, now) !== null;
 }
 
@@ -72,7 +73,7 @@ export function getPickCtaState(
 	weekNumber: number,
 	games: WeekGame[],
 	userPick: LeaguePick | undefined,
-	now = Date.now()
+	now = qaNow()
 ): PickCtaState {
 	if (games.length === 0) {
 		return { kind: 'hidden' };

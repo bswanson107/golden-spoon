@@ -1,3 +1,5 @@
+import { qaNowDate } from '$lib/qaClock.svelte';
+
 export const DEMO_SEASON_YEAR = 2025;
 
 /** Week 1 opener for the 2026 regular season (Wednesday night). */
@@ -12,7 +14,7 @@ export function isDemoSeason(seasonYear: number): boolean {
  * Used when no saved view week exists for live leagues.
  */
 export function getCurrentWeekFromDate(
-	now: Date = new Date(),
+	now: Date = qaNowDate(),
 	seasonYear = 2026
 ): number {
 	if (seasonYear !== 2026) return 1;

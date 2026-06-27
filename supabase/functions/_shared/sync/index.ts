@@ -44,5 +44,29 @@ export async function runSync(
 	};
 }
 
+/**
+ * QA Mode: run only the time-dependent side effects (kickoff win-% lock and
+ * missed-pick generation) against an injected "now", WITHOUT fetching nflverse
+ * or upserting games. This lets us exercise the real sync logic over simulated
+ * game rows + a simulated clock without the live feed clobbering them.
+ */
+export async function runSyncSideEffects(
+	adminClient: SupabaseClient,
+	seasonYear: number,
+	nowIso: string
+): Promise<Omit<SyncResult, 'skipped' | 'inProgress'>> {
+	const kickoffLocksApplied = await lockKickoffWinPcts(adminClient, seasonYear, nowIso);
+	const missedPicksInserted = await markMissedPicks(adminClient, seasonYear, nowIso);
+
+	return {
+		lastSyncAt: nowIso,
+		gamesUpdated: 0,
+		oddsUpdated: 0,
+		kickoffLocksApplied,
+		missedPicksInserted,
+		error: null
+	};
+}
+
 export type { SyncResult } from './types.ts';
 export { SYNC_STATE_KEY, DEFAULT_SEASON_YEAR } from './types.ts';

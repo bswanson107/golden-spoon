@@ -97,3 +97,58 @@ export async function fetchWeekGames(
 
 	return { games, error: null };
 }
+
+type WeekStatusQueryRow = {
+	week_number: number;
+	kickoff_at: string;
+	status: GameStatus;
+};
+
+export type WeekCompletion = { week: number; complete: boolean };
+
+/** Per-week completion for a season: a week is complete once its last (latest
+ * kickoff) game is final. */
+export async function fetchSeasonWeekCompletion(
+	seasonYear: number
+): Promise<{ weeks: WeekCompletion[]; error: string | null }> {
+	const supabase = getSupabase();
+
+	const { data, error } = await supabase
+		.from('nfl_games')
+		.select('week_number, kickoff_at, status')
+		.eq('season_year', seasonYear)
+		.order('kickoff_at', { ascending: true });
+
+	if (error) {
+		return { weeks: [], error: error.message };
+	}
+
+	const lastByWeek = new Map<number, WeekStatusQueryRow>();
+	for (const row of (data ?? []) as WeekStatusQueryRow[]) {
+		// rows are ascending by kickoff, so the last seen per week is the latest
+		lastByWeek.set(row.week_number, row);
+	}
+
+	const weeks = [...lastByWeek.entries()]
+		.map(([week, row]) => ({ week, complete: row.status === 'final' }))
+		.sort((a, b) => a.week - b.week);
+
+	return { weeks, error: null };
+}
+
+/**
+ * Highest week to surface in the season grid: every completed week plus the
+ * first not-yet-complete (current) week. Reveals the next column only once the
+ * prior week's final game is determined.
+ */
+export function maxVisibleWeek(weeks: WeekCompletion[]): number {
+	if (weeks.length === 0) return 1;
+	const completeByWeek = new Map(weeks.map((w) => [w.week, w.complete]));
+	const lastWeek = weeks[weeks.length - 1].week;
+
+	let week = 1;
+	while (week < lastWeek && completeByWeek.get(week) === true) {
+		week += 1;
+	}
+	return week;
+}

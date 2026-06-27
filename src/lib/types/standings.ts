@@ -28,5 +28,6 @@ export type LeaguePick = {
 	game_id: string;
 	kickoff_at: string;
 	is_missed: boolean;
+	is_auto_pick?: boolean;
 	is_commissioner_override: boolean;
 };

@@ -15,6 +15,7 @@ type UserPickQueryRow = {
 	points_awarded: number;
 	team_season_wins_at_pick?: number;
 	is_missed: boolean;
+	is_auto_pick?: boolean;
 	is_commissioner_override: boolean;
 	nfl_teams: { abbreviation: string; name: string } | { abbreviation: string; name: string }[] | null;
 	nfl_games: { kickoff_at: string } | { kickoff_at: string }[] | null;
@@ -46,6 +47,7 @@ function mapUserPickRow(row: UserPickQueryRow): UserLeaguePick | null {
 		team_season_wins_at_pick: row.team_season_wins_at_pick ?? 0,
 		kickoff_at: game.kickoff_at,
 		is_missed: row.is_missed,
+		is_auto_pick: row.is_auto_pick ?? false,
 		is_commissioner_override: row.is_commissioner_override
 	};
 }
@@ -71,6 +73,7 @@ export async function fetchUserLeaguePicks(
 			points_awarded,
 			team_season_wins_at_pick,
 			is_missed,
+			is_auto_pick,
 			is_commissioner_override,
 			nfl_teams ( abbreviation, name ),
 			nfl_games ( kickoff_at )

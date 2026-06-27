@@ -15,6 +15,7 @@
 		scoreDemoPick
 	} from '$lib/demo';
 	import { teamUsageByWeek, type UserLeaguePick } from '$lib/picks';
+	import { qaNowDate } from '$lib/qaClock.svelte';
 	import { fetchWeekGames } from '$lib/games';
 	import { formatSyncTimeAgo, getLastSyncTime, requestGameSync } from '$lib/syncGames';
 	import type { DemoPick, DemoState } from '$lib/types/demo';
@@ -98,7 +99,7 @@
 		if (!liveCurrentPick) return true;
 		const game = games.find((g) => g.id === liveCurrentPick.game_id);
 		if (!game) return true;
-		return game.status === 'scheduled' && new Date(game.kickoff_at) > new Date();
+		return game.status === 'scheduled' && new Date(game.kickoff_at) > qaNowDate();
 	});
 
 	const pickingEnabled = $derived(

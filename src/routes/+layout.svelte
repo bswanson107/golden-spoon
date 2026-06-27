@@ -11,6 +11,8 @@
 	import { AUTH_CONTEXT_KEY, ADMIN_CONTEXT_KEY, type AuthStore, type AdminStore } from '$lib/auth';
 	import { getSupabase } from '$lib/supabase';
 	import { isAppAdmin, loadAdminMode, saveAdminMode } from '$lib/admin';
+	import QaBanner from '$lib/components/QaBanner.svelte';
+	import { hydrateQaClock } from '$lib/qaClock.svelte';
 	import { getTheme, initTheme, toggleTheme } from '$lib/themeStore.svelte';
 	import {
 		getSeasonIndicatorLabel,
@@ -65,6 +67,7 @@
 	onMount(() => {
 		initTheme();
 		initSeasonIndicator();
+		hydrateQaClock().then(() => initSeasonIndicator());
 		adminModeEnabled = loadAdminMode();
 
 		const supabase = getSupabase();
@@ -153,6 +156,7 @@
 </svelte:head>
 
 <div class="app">
+	<QaBanner />
 	<header class="header chrome-bar">
 		<a href="{base}/" class="brand">Golden Spoon</a>
 
@@ -233,6 +237,9 @@
 									<a href="{base}/design" class="menu-link" onclick={closeMenu}>Design demo</a>
 								</li>
 								{#if showAdminToggle}
+									<li>
+										<a href="{base}/qa" class="menu-link" onclick={closeMenu}>QA Mode</a>
+									</li>
 									<li class="menu-admin">
 										<label class="admin-toggle">
 											<input

@@ -17,6 +17,7 @@
 	import { fetchWeekGames } from '$lib/games';
 	import { formatGameKickoffShort } from '$lib/gameKickoff';
 	import { fetchLeague } from '$lib/leagues';
+	import { qaNowDate } from '$lib/qaClock.svelte';
 	import { getCurrentWeekFromDate } from '$lib/season';
 	import { formatSyncTimeAgo } from '$lib/syncGames';
 	import type { AdminPick, OverrideOutcome } from '$lib/types/commissioner';
@@ -80,7 +81,7 @@
 			return;
 		}
 
-		viewWeek = getCurrentWeekFromDate(new Date(), leagueResult.league.season_year);
+		viewWeek = getCurrentWeekFromDate(qaNowDate(), leagueResult.league.season_year);
 		syncState = syncResult.state;
 
 		if (syncResult.error && !error) {

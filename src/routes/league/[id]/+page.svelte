@@ -20,7 +20,7 @@
 		saveDemoState,
 		simulatedWeekLabel
 	} from '$lib/demo';
-	import { fetchWeekGames } from '$lib/games';
+	import { fetchSeasonWeekCompletion, fetchWeekGames, maxVisibleWeek } from '$lib/games';
 	import {
 		getGamesStartedCount,
 		getNextUpcomingKickoff,
@@ -33,6 +33,7 @@
 		parseTiebreakerMode
 	} from '$lib/leagueRules';
 	import { fetchLeaguePicks, fetchLeaguePickSubmissions, fetchLeagueStandings, type PickSubmissionsByCell } from '$lib/standings';
+	import { qaNowDate } from '$lib/qaClock.svelte';
 	import { getCurrentWeekFromDate, isDemoSeason } from '$lib/season';
 	import { syncSeasonIndicatorForLeague } from '$lib/seasonIndicatorStore.svelte';
 	import type { DemoState } from '$lib/types/demo';
@@ -50,6 +51,7 @@
 	let demoState = $state<DemoState>({ enabled: false, simulatedWeek: 1, picks: {} });
 	let demoGamesByWeek = $state<Map<number, WeekGame[]>>(new Map());
 	let liveWeekGames = $state<WeekGame[]>([]);
+	let gridMaxWeek = $state<number | null>(null);
 	let viewWeek = $state(1);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
@@ -311,7 +313,7 @@
 				league = leagueResult.league;
 				if (!isDemoSeason(leagueResult.league.season_year)) {
 					viewWeek = getCurrentWeekFromDate(
-						new Date(),
+						qaNowDate(),
 						leagueResult.league.season_year
 					);
 				}
@@ -357,6 +359,20 @@
 
 		fetchWeekGames(leagueData.season_year, week).then((result) => {
 			liveWeekGames = result.games;
+		});
+	});
+
+	$effect(() => {
+		const leagueData = league;
+		// re-evaluate when picks reload (a proxy for game state changes)
+		void picks;
+		if (!leagueData || isDemoSeason(leagueData.season_year)) {
+			gridMaxWeek = null;
+			return;
+		}
+
+		fetchSeasonWeekCompletion(leagueData.season_year).then((result) => {
+			gridMaxWeek = result.error ? null : maxVisibleWeek(result.weeks);
 		});
 	});
 
@@ -521,6 +537,7 @@
 					standings={leagueView.standings}
 					currentUserId={auth.user?.id ?? null}
 					viewWeek={null}
+					maxWeek={isDemo ? null : gridMaxWeek}
 					{pickSubmissions}
 					pickVisibility={rulesPickVisibility}
 				/>

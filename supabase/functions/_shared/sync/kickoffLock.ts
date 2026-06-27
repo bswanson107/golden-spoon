@@ -25,9 +25,10 @@ type LeagueRow = {
 
 export async function lockKickoffWinPcts(
 	adminClient: SupabaseClient,
-	seasonYear: number
+	seasonYear: number,
+	nowIso: string = new Date().toISOString()
 ): Promise<number> {
-	const now = new Date().toISOString();
+	const now = nowIso;
 
 	const { data: picks, error: picksError } = await adminClient
 		.from('picks')

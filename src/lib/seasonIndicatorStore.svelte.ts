@@ -1,4 +1,5 @@
 import { clampSimulatedWeek } from '$lib/demo';
+import { qaNowDate } from '$lib/qaClock.svelte';
 import { DEMO_SEASON_YEAR, getCurrentWeekFromDate, isDemoSeason } from '$lib/season';
 
 type SeasonIndicator = {
@@ -9,7 +10,7 @@ type SeasonIndicator = {
 function liveIndicator(seasonYear = 2026): SeasonIndicator {
 	return {
 		seasonYear,
-		week: getCurrentWeekFromDate(new Date(), seasonYear)
+		week: getCurrentWeekFromDate(qaNowDate(), seasonYear)
 	};
 }
 
