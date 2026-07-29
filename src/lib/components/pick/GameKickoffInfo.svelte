@@ -11,7 +11,13 @@
 	class:highlighted={info.badges.length > 0}
 >
 	{#each info.badges as badge (badge.id)}
-		<span class="slot-badge slot-{badge.id}" title={badge.label}>{badge.short}</span>
+		<span
+			class="slot-badge slot-{badge.id}"
+			title={badge.label}
+			aria-label={badge.label}
+			data-tooltip={badge.label}
+			tabindex="0"
+		>{badge.short}</span>
 	{/each}
 	<time class="kickoff-time" datetime={kickoffAt}>{info.formatted}</time>
 </div>
@@ -45,6 +51,7 @@
 	}
 
 	.slot-badge {
+		position: relative;
 		display: inline-flex;
 		align-items: center;
 		padding: 0.18rem 0.5rem;
@@ -55,6 +62,42 @@
 		text-transform: uppercase;
 		border: none;
 		box-shadow: var(--shadow-sm);
+		cursor: help;
+	}
+
+	.slot-badge::after {
+		content: attr(data-tooltip);
+		position: absolute;
+		left: 50%;
+		bottom: calc(100% + 0.4rem);
+		transform: translateX(-50%) translateY(0.15rem);
+		padding: 0.35rem 0.55rem;
+		border-radius: var(--radius);
+		background: var(--text);
+		color: var(--surface);
+		font-size: 0.72rem;
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		text-transform: none;
+		white-space: nowrap;
+		box-shadow: var(--shadow);
+		opacity: 0;
+		pointer-events: none;
+		transition:
+			opacity 0.12s ease,
+			transform 0.12s ease;
+		z-index: 5;
+	}
+
+	.slot-badge:hover::after,
+	.slot-badge:focus-visible::after {
+		opacity: 1;
+		transform: translateX(-50%) translateY(0);
+	}
+
+	.slot-badge:focus-visible {
+		outline: 2px solid var(--brand);
+		outline-offset: 2px;
 	}
 
 	.slot-tnf {

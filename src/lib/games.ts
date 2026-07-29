@@ -107,7 +107,7 @@ type WeekStatusQueryRow = {
 export type WeekCompletion = { week: number; complete: boolean };
 
 /** Per-week completion for a season: a week is complete once its last (latest
- * kickoff) game is final. */
+ * kickoff) game is final or cancelled. */
 export async function fetchSeasonWeekCompletion(
 	seasonYear: number
 ): Promise<{ weeks: WeekCompletion[]; error: string | null }> {
@@ -125,26 +125,31 @@ export async function fetchSeasonWeekCompletion(
 
 	const lastByWeek = new Map<number, WeekStatusQueryRow>();
 	for (const row of (data ?? []) as WeekStatusQueryRow[]) {
-		// rows are ascending by kickoff, so the last seen per week is the latest
-		lastByWeek.set(row.week_number, row);
+		const week = Number(row.week_number);
+		if (!Number.isFinite(week) || week < 1) continue;
+		// Ascending kickoff order → last write per week is the latest game (MNF).
+		lastByWeek.set(week, { ...row, week_number: week });
 	}
 
 	const weeks = [...lastByWeek.entries()]
-		.map(([week, row]) => ({ week, complete: row.status === 'final' }))
+		.map(([week, row]) => ({
+			week,
+			complete: row.status === 'final' || row.status === 'cancelled'
+		}))
 		.sort((a, b) => a.week - b.week);
 
 	return { weeks, error: null };
 }
 
 /**
- * Highest week to surface in the season grid: every completed week plus the
- * first not-yet-complete (current) week. Reveals the next column only once the
- * prior week's final game is determined.
+ * Highest week to surface in the season grid: every consecutive completed week
+ * from week 1, plus the next (current) week. Reveals week N+1 only once week N's
+ * final game is determined — never columns beyond that.
  */
 export function maxVisibleWeek(weeks: WeekCompletion[]): number {
 	if (weeks.length === 0) return 1;
-	const completeByWeek = new Map(weeks.map((w) => [w.week, w.complete]));
-	const lastWeek = weeks[weeks.length - 1].week;
+	const completeByWeek = new Map(weeks.map((w) => [Number(w.week), w.complete]));
+	const lastWeek = Math.max(...weeks.map((w) => Number(w.week)), 1);
 
 	let week = 1;
 	while (week < lastWeek && completeByWeek.get(week) === true) {

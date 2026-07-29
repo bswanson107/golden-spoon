@@ -137,19 +137,21 @@
 	}
 
 	th:nth-child(2) {
-		width: 40%;
+		width: 36%;
 	}
 
 	th:nth-child(3) {
-		width: 18%;
+		width: 16%;
 	}
 
 	th:nth-child(4) {
-		width: 18%;
+		width: 16%;
 	}
 
 	th:nth-child(5) {
-		width: 18%;
+		width: 26%;
+		white-space: normal;
+		line-height: 1.25;
 	}
 
 	.num {

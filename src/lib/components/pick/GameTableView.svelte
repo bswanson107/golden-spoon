@@ -1,6 +1,6 @@
 <script lang="ts">
 	import TeamLogo from '$lib/components/TeamLogo.svelte';
-	import { getTeamName, getTeamSurfaceTint } from '$lib/data/nflTeams';
+	import { getTeamName } from '$lib/data/nflTeams';
 	import { isUnderdog, formatWinPct } from '$lib/demo';
 	import { formatGameKickoffTable } from '$lib/gameKickoff';
 	import type { WeekGame } from '$lib/types/game';
@@ -72,11 +72,11 @@
 					{@const isSelected = selectedTeamId === team.id}
 					{@const isUD = winPct !== null && isUnderdog(winPct, underdogThreshold)}
 					{@const usedWk = usedWeekFor(team.id)}
+					{@const stripe = (gi * 2 + ti) % 2 === 0 ? 'stripe-a' : 'stripe-b'}
 					<tr
-						class="team-row {state}"
+						class="team-row {state} {stripe}"
 						class:is-selected={isSelected}
 						class:is-submitted={isSubmitted && isSelected}
-						style:--team-tint={getTeamSurfaceTint(team.id)}
 						onclick={() => state !== 'locked' && onSelectTeam?.(game, team.id)}
 						role="button"
 						tabindex={state === 'locked' ? -1 : 0}
@@ -151,10 +151,17 @@
 	.team-row td:not(.col-kickoff) {
 		padding: 0.4rem 0.5rem;
 		vertical-align: middle;
-		background: color-mix(in srgb, var(--team-tint) 14%, var(--surface));
 		border: none;
 		cursor: pointer;
 		transition: background 0.12s ease;
+	}
+
+	.team-row.stripe-a td:not(.col-kickoff) {
+		background: color-mix(in srgb, var(--text) 3.5%, var(--surface));
+	}
+
+	.team-row.stripe-b td:not(.col-kickoff) {
+		background: color-mix(in srgb, var(--text) 8%, var(--surface));
 	}
 
 	.team-row td.col-kickoff {
@@ -177,7 +184,7 @@
 
 	.team-row.selectable:hover td:not(.col-kickoff),
 	.team-row.used-elsewhere:hover td:not(.col-kickoff) {
-		background: color-mix(in srgb, var(--team-tint) 26%, var(--surface));
+		background: color-mix(in srgb, var(--text) 12%, var(--surface));
 	}
 
 	.team-row.locked td:not(.col-kickoff) {
@@ -191,11 +198,7 @@
 
 	.team-row.is-selected td:not(.col-kickoff),
 	.team-row.is-submitted td:not(.col-kickoff) {
-		background: color-mix(
-			in srgb,
-			var(--brand-muted) 55%,
-			color-mix(in srgb, var(--team-tint) 18%, var(--surface))
-		);
+		background: color-mix(in srgb, var(--brand-muted) 70%, var(--surface));
 		border-top: 2px solid var(--brand);
 		border-bottom: 2px solid var(--brand);
 	}
@@ -214,7 +217,7 @@
 
 	:global([data-theme='light']) .team-row.is-selected td:not(.col-kickoff),
 	:global([data-theme='light']) .team-row.is-submitted td:not(.col-kickoff) {
-		background: color-mix(in srgb, #d4a72c 24%, color-mix(in srgb, var(--team-tint) 14%, var(--surface)));
+		background: color-mix(in srgb, #d4a72c 22%, var(--surface));
 		border-top-color: #9a7418;
 		border-bottom-color: #9a7418;
 	}

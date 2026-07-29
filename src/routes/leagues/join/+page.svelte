@@ -35,7 +35,7 @@
 			<input
 				type="text"
 				name="inviteCode"
-				placeholder="e.g. a1b2c3"
+				placeholder="e.g. geiger-family"
 				required
 				autocapitalize="off"
 				autocomplete="off"

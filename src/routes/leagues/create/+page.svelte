@@ -16,6 +16,7 @@
 
 	let name = $state('');
 	let seasonYear = $state(currentNflSeasonYear());
+	let inviteCode = $state('');
 	let underdogThreshold = $state<number>(DEFAULT_UNDERDOG_THRESHOLD);
 	let tiebreakerMode = $state<TiebreakerMode>(DEFAULT_TIEBREAKER_MODE);
 	let pickVisibility = $state<PickVisibility>(DEFAULT_PICK_VISIBILITY);
@@ -30,6 +31,7 @@
 		submitting = true;
 
 		const { league, error: createError } = await createLeague(name, seasonYear, {
+			inviteCode,
 			underdogThresholdPct: underdogThreshold,
 			tiebreakerMode,
 			pickVisibility
@@ -63,6 +65,27 @@
 				disabled={submitting}
 			/>
 		</label>
+
+		<label>
+			Invite code
+			<input
+				type="text"
+				name="inviteCode"
+				placeholder="e.g. geiger-family"
+				required
+				minlength="3"
+				maxlength="32"
+				autocapitalize="off"
+				autocomplete="off"
+				spellcheck="false"
+				bind:value={inviteCode}
+				disabled={submitting}
+			/>
+		</label>
+		<p class="field-hint">
+			Something short and shareable. Letters, numbers, and hyphens only (3–32 characters). Must be
+			unique across all leagues.
+		</p>
 
 		<label>
 			Season year
@@ -316,5 +339,12 @@
 	.option-text {
 		flex: 1;
 		min-width: 0;
+	}
+
+	.field-hint {
+		margin: -0.35rem 0 0.35rem;
+		font-size: 0.82rem;
+		line-height: 1.4;
+		color: var(--text-muted);
 	}
 </style>

@@ -64,7 +64,7 @@
 	{:else}
 		<form class="auth-form" onsubmit={handleSubmit}>
 			<label>
-				Display name
+				Name
 				<input
 					type="text"
 					name="displayName"
@@ -74,6 +74,9 @@
 					disabled={submitting}
 				/>
 			</label>
+			<p class="field-hint">
+				This is how you’ll appear to league mates. You can change it later in Account.
+			</p>
 
 			<label>
 				Email
@@ -128,5 +131,12 @@
 		color: var(--win-bg);
 		font-size: 0.875rem;
 		box-shadow: var(--shadow-sm);
+	}
+
+	.field-hint {
+		margin: -0.35rem 0 0.35rem;
+		font-size: 0.82rem;
+		line-height: 1.4;
+		color: var(--text-muted);
 	}
 </style>

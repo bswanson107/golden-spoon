@@ -26,16 +26,20 @@
 		getNextUpcomingKickoff,
 		getPickCtaState
 	} from '$lib/leaguePickStatus';
-	import { adminKickLeagueMember, fetchLeague, fetchMyLeagues } from '$lib/leagues';
+	import { adminKickLeagueMember, fetchLeague, fetchMyLeagues, updateLeagueInviteCode } from '$lib/leagues';
 	import {
 		normalizeUnderdogThreshold,
 		parsePickVisibility,
 		parseTiebreakerMode
 	} from '$lib/leagueRules';
-	import { fetchLeaguePicks, fetchLeaguePickSubmissions, fetchLeagueStandings, type PickSubmissionsByCell } from '$lib/standings';
-	import { qaNowDate } from '$lib/qaClock.svelte';
+	import {
+		isQaClockEnabled,
+		qaNowDate,
+		qaSimulatedNowMs
+	} from '$lib/qaClock.svelte';
 	import { getCurrentWeekFromDate, isDemoSeason } from '$lib/season';
 	import { syncSeasonIndicatorForLeague } from '$lib/seasonIndicatorStore.svelte';
+	import { fetchLeaguePicks, fetchLeaguePickSubmissions, fetchLeagueStandings, type PickSubmissionsByCell } from '$lib/standings';
 	import type { DemoState } from '$lib/types/demo';
 	import type { WeekGame } from '$lib/types/game';
 	import type { LeagueWithRole } from '$lib/types/league';
@@ -51,11 +55,17 @@
 	let demoState = $state<DemoState>({ enabled: false, simulatedWeek: 1, picks: {} });
 	let demoGamesByWeek = $state<Map<number, WeekGame[]>>(new Map());
 	let liveWeekGames = $state<WeekGame[]>([]);
-	let gridMaxWeek = $state<number | null>(null);
+	let gridMaxWeek = $state<number | null>(1);
+	/** Bumped on navigate / focus so week-completion re-fetches after QA changes. */
+	let gridRefreshToken = $state(0);
 	let viewWeek = $state(1);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let copied = $state(false);
+	let editingInvite = $state(false);
+	let inviteDraft = $state('');
+	let inviteSaving = $state(false);
+	let inviteError = $state<string | null>(null);
 	let kickingUserId = $state<string | null>(null);
 	let kickError = $state<string | null>(null);
 	let leagueCount = $state<number | null>(null);
@@ -364,16 +374,25 @@
 
 	$effect(() => {
 		const leagueData = league;
-		// re-evaluate when picks reload (a proxy for game state changes)
+		// Re-run when picks reload, QA clock changes, or we explicitly refresh
+		// (returning from /qa after simulating results).
 		void picks;
+		void qaSimulatedNowMs();
+		void isQaClockEnabled();
+		void gridRefreshToken;
 		if (!leagueData || isDemoSeason(leagueData.season_year)) {
 			gridMaxWeek = null;
 			return;
 		}
 
+		let cancelled = false;
 		fetchSeasonWeekCompletion(leagueData.season_year).then((result) => {
-			gridMaxWeek = result.error ? null : maxVisibleWeek(result.weeks);
+			if (cancelled) return;
+			gridMaxWeek = result.error ? 1 : maxVisibleWeek(result.weeks);
 		});
+		return () => {
+			cancelled = true;
+		};
 	});
 
 	$effect(() => {
@@ -405,6 +424,23 @@
 
 	afterNavigate(() => {
 		refreshDemoState();
+		gridRefreshToken += 1;
+		if (league && !isDemoSeason(league.season_year)) {
+			void reloadLeagueData();
+		}
+	});
+
+	$effect(() => {
+		if (typeof document === 'undefined') return;
+		const onVisible = () => {
+			if (document.visibilityState !== 'visible') return;
+			gridRefreshToken += 1;
+			if (league && !isDemoSeason(league.season_year)) {
+				void reloadLeagueData();
+			}
+		};
+		document.addEventListener('visibilitychange', onVisible);
+		return () => document.removeEventListener('visibilitychange', onVisible);
 	});
 
 	async function copyInviteCode() {
@@ -418,6 +454,34 @@
 		} catch {
 			// fallback: user can select manually
 		}
+	}
+
+	function startEditInvite() {
+		if (!league) return;
+		inviteDraft = league.invite_code;
+		inviteError = null;
+		editingInvite = true;
+	}
+
+	function cancelEditInvite() {
+		editingInvite = false;
+		inviteError = null;
+		inviteDraft = '';
+	}
+
+	async function saveInviteCode() {
+		if (!league) return;
+		inviteError = null;
+		inviteSaving = true;
+		const { inviteCode, error: saveError } = await updateLeagueInviteCode(league.id, inviteDraft);
+		inviteSaving = false;
+		if (saveError || !inviteCode) {
+			inviteError = saveError ?? 'Could not update invite code.';
+			return;
+		}
+		league = { ...league, invite_code: inviteCode };
+		editingInvite = false;
+		inviteDraft = '';
 	}
 </script>
 
@@ -485,12 +549,56 @@
 			<section class="card">
 				<h2 class="card-title">Invite family</h2>
 				<p class="muted">Share this code so others can join.</p>
-				<div class="invite-row">
-					<code class="invite-code">{league.invite_code}</code>
-					<button type="button" class="btn btn-ghost btn-sm" onclick={copyInviteCode}>
-						{copied ? 'Copied!' : 'Copy'}
-					</button>
-				</div>
+				{#if editingInvite}
+					<div class="invite-edit">
+						<input
+							type="text"
+							class="invite-input"
+							name="inviteCode"
+							minlength="3"
+							maxlength="32"
+							autocapitalize="off"
+							autocomplete="off"
+							spellcheck="false"
+							bind:value={inviteDraft}
+							disabled={inviteSaving}
+						/>
+						<div class="invite-row">
+							<button
+								type="button"
+								class="btn btn-primary btn-sm"
+								onclick={saveInviteCode}
+								disabled={inviteSaving}
+							>
+								{inviteSaving ? 'Saving…' : 'Save'}
+							</button>
+							<button
+								type="button"
+								class="btn btn-ghost btn-sm"
+								onclick={cancelEditInvite}
+								disabled={inviteSaving}
+							>
+								Cancel
+							</button>
+						</div>
+						{#if inviteError}
+							<p class="auth-error" role="alert">{inviteError}</p>
+						{/if}
+						<p class="muted invite-hint">
+							Letters, numbers, and hyphens only. Must be unique across all leagues.
+						</p>
+					</div>
+				{:else}
+					<div class="invite-row">
+						<code class="invite-code">{league.invite_code}</code>
+						<button type="button" class="btn btn-ghost btn-sm" onclick={copyInviteCode}>
+							{copied ? 'Copied!' : 'Copy'}
+						</button>
+						<button type="button" class="btn btn-ghost btn-sm" onclick={startEditInvite}>
+							Edit
+						</button>
+					</div>
+				{/if}
 			</section>
 		{/if}
 
@@ -507,7 +615,7 @@
 					{/if}
 				</p>
 			{:else}
-				<p class="muted">Ranked by total points. TB = sum of picked teams' season wins (lower is better).</p>
+				<p class="muted">Ranked by total points. Tiebreaker = sum of picked teams' season wins (lower is better).</p>
 			{/if}
 			{#if kickError}
 				<p class="auth-error" role="alert">{kickError}</p>
@@ -592,8 +700,34 @@
 	.invite-row {
 		display: flex;
 		align-items: center;
+		flex-wrap: wrap;
 		gap: 0.75rem;
 		margin-top: 0.75rem;
+	}
+
+	.invite-edit {
+		margin-top: 0.75rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.invite-edit .invite-row {
+		margin-top: 0;
+	}
+
+	.invite-input {
+		width: 100%;
+		max-width: 20rem;
+		font-size: 1.1rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		font-family: var(--font-mono, ui-monospace, monospace);
+	}
+
+	.invite-hint {
+		margin: 0;
+		font-size: 0.82rem;
 	}
 
 	.invite-code {

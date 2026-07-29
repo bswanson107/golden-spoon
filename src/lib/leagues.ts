@@ -9,6 +9,7 @@ import { getSupabase } from '$lib/supabase';
 import type { League, LeagueWithRole } from '$lib/types/league';
 
 export type CreateLeagueRules = {
+	inviteCode: string;
 	underdogThresholdPct?: number;
 	tiebreakerMode?: TiebreakerMode;
 	pickVisibility?: PickVisibility;
@@ -16,6 +17,33 @@ export type CreateLeagueRules = {
 
 const LEAGUE_SELECT =
 	'id, name, season_year, commissioner_id, invite_code, is_active, created_at, underdog_threshold_pct, tiebreaker_mode, pick_visibility';
+
+/** Normalize for storage/lookup: trim + lowercase. */
+export function normalizeInviteCode(raw: string): string {
+	return raw.trim().toLowerCase();
+}
+
+/** Client-side invite code rules (mirrors normalize_invite_code in SQL). */
+export function validateInviteCode(raw: string): string | null {
+	const code = normalizeInviteCode(raw);
+	if (!code) return 'Invite code is required.';
+	if (code.length < 3) return 'Invite code must be at least 3 characters.';
+	if (code.length > 32) return 'Invite code must be at most 32 characters.';
+	if (!/^[a-z0-9-]+$/.test(code)) {
+		return 'Invite code can only use letters, numbers, and hyphens.';
+	}
+	return null;
+}
+
+function mapInviteError(message: string): string {
+	if (/already in use/i.test(message) || /unique|duplicate/i.test(message)) {
+		return 'That invite code is already in use. Pick a different one.';
+	}
+	if (/only use letters/i.test(message) || /at least 3/i.test(message) || /at most 32/i.test(message)) {
+		return message;
+	}
+	return message;
+}
 
 function mapMembership(row: {
 	league_id: string;
@@ -75,13 +103,18 @@ export async function getPostAuthPath(userId: string, basePath: string): Promise
 export async function createLeague(
 	name: string,
 	seasonYear: number,
-	rules: CreateLeagueRules = {}
+	rules: CreateLeagueRules
 ): Promise<{ league: League | null; error: string | null }> {
 	const supabase = getSupabase();
 	const trimmedName = name.trim();
 
 	if (!trimmedName) {
 		return { league: null, error: 'League name is required.' };
+	}
+
+	const inviteError = validateInviteCode(rules.inviteCode);
+	if (inviteError) {
+		return { league: null, error: inviteError };
 	}
 
 	const {
@@ -95,30 +128,60 @@ export async function createLeague(
 	const { data, error } = await supabase.rpc('create_league', {
 		p_name: trimmedName,
 		p_season_year: seasonYear,
+		p_invite_code: normalizeInviteCode(rules.inviteCode),
 		p_underdog_threshold_pct: rules.underdogThresholdPct ?? DEFAULT_UNDERDOG_THRESHOLD,
 		p_tiebreaker_mode: rules.tiebreakerMode ?? DEFAULT_TIEBREAKER_MODE,
 		p_pick_visibility: rules.pickVisibility ?? DEFAULT_PICK_VISIBILITY
 	});
 
 	if (error) {
-		if (error.message.includes('create_league')) {
+		if (error.message.includes('create_league') && error.code === 'PGRST202') {
 			return {
 				league: null,
 				error:
-					'Create function missing. Run supabase/migrations/017_league_rules_v1.sql in Supabase.'
+					'Create function missing. Run supabase/migrations/023_custom_invite_codes.sql in Supabase.'
 			};
 		}
-		return { league: null, error: error.message };
+		return { league: null, error: mapInviteError(error.message) };
 	}
 
 	return { league: data as League, error: null };
+}
+
+export async function updateLeagueInviteCode(
+	leagueId: string,
+	inviteCode: string
+): Promise<{ inviteCode: string | null; error: string | null }> {
+	const inviteError = validateInviteCode(inviteCode);
+	if (inviteError) {
+		return { inviteCode: null, error: inviteError };
+	}
+
+	const { data, error } = await getSupabase().rpc('update_league_invite_code', {
+		p_league_id: leagueId,
+		p_invite_code: normalizeInviteCode(inviteCode)
+	});
+
+	if (error) {
+		if (error.code === 'PGRST202' || error.message.includes('update_league_invite_code')) {
+			return {
+				inviteCode: null,
+				error:
+					'Invite update is not set up yet. Run supabase/migrations/023_custom_invite_codes.sql in Supabase.'
+			};
+		}
+		return { inviteCode: null, error: mapInviteError(error.message) };
+	}
+
+	const league = data as League;
+	return { inviteCode: league.invite_code, error: null };
 }
 
 export async function joinLeagueByInvite(
 	inviteCode: string
 ): Promise<{ leagueId: string | null; error: string | null }> {
 	const supabase = getSupabase();
-	const code = inviteCode.trim().toLowerCase();
+	const code = normalizeInviteCode(inviteCode);
 
 	if (!code) {
 		return { leagueId: null, error: 'Invite code is required.' };

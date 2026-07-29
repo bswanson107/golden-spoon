@@ -20,7 +20,7 @@ export function parsePickVisibility(value: string | null | undefined): PickVisib
 }
 
 export function tiebreakerShortLabel(mode: TiebreakerMode): string {
-	return mode === 'most_wins' ? 'TB ↑' : 'TB ↓';
+	return mode === 'most_wins' ? 'Tiebreaker ↑' : 'Tiebreaker ↓';
 }
 
 export function tiebreakerHint(mode: TiebreakerMode): string {

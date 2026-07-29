@@ -69,14 +69,12 @@
 				{/if}
 			</p>
 		</div>
-		<a href={pickUrl} class="btn btn-primary">Pick now →</a>
+		<a href={pickUrl} class="btn btn-primary">Pick Selections</a>
 	</section>
 {:else if pickCta.kind === 'submitted' && userPick}
 	<section class="dashboard dashboard-pick" aria-labelledby="pick-hero-heading">
 		<div class="pick-hero">
-			{#if pickCta.changeable}
-				<a href={pickUrl} class="btn btn-ghost btn-sm change-link">Change pick</a>
-			{/if}
+			<a href={pickUrl} class="btn btn-ghost btn-sm change-link">Pick Selections</a>
 
 			<div class="pick-logo">
 				<TeamLogo teamCode={userPick.team_id} size={100} className="pick-hero-logo" />
@@ -139,7 +137,10 @@
 	</section>
 {:else if pickCta.kind === 'closed'}
 	<section class="dashboard dashboard-closed" aria-labelledby="pick-closed-heading">
-		<h2 id="pick-closed-heading" class="closed-title">Week {week}</h2>
+		<div class="closed-header">
+			<h2 id="pick-closed-heading" class="closed-title">Week {week}</h2>
+			<a href={pickUrl} class="btn btn-ghost btn-sm">Pick Selections</a>
+		</div>
 		{#if userPick && !userPick.is_missed}
 			<p class="closed-copy">
 				You're locked in on <strong>{userPick.team_abbreviation}</strong>.
@@ -341,8 +342,16 @@
 		box-shadow: var(--shadow-sm);
 	}
 
+	.closed-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		margin-bottom: 0.35rem;
+	}
+
 	.closed-title {
-		margin: 0 0 0.35rem;
+		margin: 0;
 		font-size: 1rem;
 		font-weight: 600;
 		color: var(--text);

@@ -1,3 +1,36 @@
+import ariLogo from '$lib/assets/nflLogos/arizona-cardinals-logo.svg';
+import atlLogo from '$lib/assets/nflLogos/atlanta-falcons-logo.svg';
+import balLogo from '$lib/assets/nflLogos/baltimore-ravens-logo.svg';
+import bufLogo from '$lib/assets/nflLogos/buffalo-bills-logo.svg';
+import carLogo from '$lib/assets/nflLogos/carolina-panthers-logo.svg';
+import chiLogo from '$lib/assets/nflLogos/chicago-bears-logo.svg';
+import cinLogo from '$lib/assets/nflLogos/cincinnati-bengals-logo.svg';
+import cleLogo from '$lib/assets/nflLogos/cleveland-browns-logo.svg';
+import dalLogo from '$lib/assets/nflLogos/dallas-cowboys-logo.svg';
+import denLogo from '$lib/assets/nflLogos/denver-broncos-logo.svg';
+import detLogo from '$lib/assets/nflLogos/detroit-lions-logo.svg';
+import gbLogo from '$lib/assets/nflLogos/green-bay-packers-logo.svg';
+import houLogo from '$lib/assets/nflLogos/houston-texans-logo.svg';
+import indLogo from '$lib/assets/nflLogos/indianapolis-colts-logo.svg';
+import jaxLogo from '$lib/assets/nflLogos/jacksonville-jaguars-logo.svg';
+import kcLogo from '$lib/assets/nflLogos/kansas-city-chiefs-logo.svg';
+import lvLogo from '$lib/assets/nflLogos/las-vegas-raiders-logo.svg';
+import lacLogo from '$lib/assets/nflLogos/los-angeles-chargers-logo.svg';
+import larLogo from '$lib/assets/nflLogos/los-angeles-rams-logo.svg';
+import miaLogo from '$lib/assets/nflLogos/miami-dolphins-logo.svg';
+import minLogo from '$lib/assets/nflLogos/minnesota-vikings-logo.svg';
+import neLogo from '$lib/assets/nflLogos/new-england-patriots-logo.svg';
+import noLogo from '$lib/assets/nflLogos/new-orleans-saints-logo.svg';
+import nygLogo from '$lib/assets/nflLogos/new-york-giants-logo.svg';
+import nyjLogo from '$lib/assets/nflLogos/new-york-jets-logo.svg';
+import phiLogo from '$lib/assets/nflLogos/philadelphia-eagles-logo.svg';
+import pitLogo from '$lib/assets/nflLogos/pittsburgh-steelers-logo.svg';
+import seaLogo from '$lib/assets/nflLogos/seattle-seahawks-logo.svg';
+import sfLogo from '$lib/assets/nflLogos/san-francisco-49ers-logo.svg';
+import tbLogo from '$lib/assets/nflLogos/tampa-bay-buccaneers-logo.svg';
+import tenLogo from '$lib/assets/nflLogos/tennessee-titans-logo.svg';
+import wasLogo from '$lib/assets/nflLogos/washington-commanders-logo.svg';
+
 export type NFLTeamCode =
 	| 'ARI'
 	| 'ATL'
@@ -39,9 +72,40 @@ export type NFLTeam = {
 	primaryColor: string;
 };
 
-function espnLogoUrl(code: string): string {
-	return `https://a.espncdn.com/i/teamlogos/nfl/500/${code.toLowerCase()}.png`;
-}
+const TEAM_LOGOS: Record<NFLTeamCode, string> = {
+	ARI: ariLogo,
+	ATL: atlLogo,
+	BAL: balLogo,
+	BUF: bufLogo,
+	CAR: carLogo,
+	CHI: chiLogo,
+	CIN: cinLogo,
+	CLE: cleLogo,
+	DAL: dalLogo,
+	DEN: denLogo,
+	DET: detLogo,
+	GB: gbLogo,
+	HOU: houLogo,
+	IND: indLogo,
+	JAX: jaxLogo,
+	KC: kcLogo,
+	LV: lvLogo,
+	LAC: lacLogo,
+	LAR: larLogo,
+	MIA: miaLogo,
+	MIN: minLogo,
+	NE: neLogo,
+	NO: noLogo,
+	NYG: nygLogo,
+	NYJ: nyjLogo,
+	PHI: phiLogo,
+	PIT: pitLogo,
+	SEA: seaLogo,
+	SF: sfLogo,
+	TB: tbLogo,
+	TEN: tenLogo,
+	WAS: wasLogo
+};
 
 const TEAM_NAMES: Record<NFLTeamCode, string> = {
 	ARI: 'Arizona Cardinals',
@@ -119,7 +183,7 @@ export const NFL_TEAMS = Object.fromEntries(
 		{
 			code,
 			name: TEAM_NAMES[code],
-			logo: espnLogoUrl(code),
+			logo: TEAM_LOGOS[code],
 			primaryColor: TEAM_COLORS[code]
 		}
 	])
