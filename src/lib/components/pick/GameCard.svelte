@@ -220,7 +220,7 @@
 
 	.team-side.is-submitted-pick {
 		border: 2px solid var(--brand);
-		box-shadow: var(--shadow), 0 0 0 1px color-mix(in srgb, var(--brand) 35%, transparent);
+		box-shadow: var(--shadow);
 	}
 
 	:global([data-theme='light']) .team-side.is-submitted-pick {
@@ -230,9 +230,7 @@
 			#d4a72c 32%,
 			color-mix(in srgb, var(--team-tint, var(--text-muted)) 18%, var(--surface))
 		);
-		box-shadow:
-			var(--shadow-lg),
-			0 0 0 2px color-mix(in srgb, #9a7418 28%, transparent);
+		box-shadow: var(--shadow-lg);
 	}
 
 	.team-side.used-elsewhere {

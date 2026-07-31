@@ -49,13 +49,8 @@
 
 <div class="win-pct">
 	<div class="win-pct-values" aria-hidden="true">
-		<div class="value-segment away" style:flex-grow={split.away}>
-			<span class="team-pct away-pct">{awayLabel} - {formatWinPct(awayWinPct)}</span>
-		</div>
-		<div class="split-gap"></div>
-		<div class="value-segment home" style:flex-grow={split.home}>
-			<span class="team-pct home-pct">{formatWinPct(homeWinPct)} - {homeLabel}</span>
-		</div>
+		<span class="team-pct away-pct">{awayLabel} - {formatWinPct(awayWinPct)}</span>
+		<span class="team-pct home-pct">{formatWinPct(homeWinPct)} - {homeLabel}</span>
 	</div>
 
 	<div class="win-pct-track-shell">
@@ -103,27 +98,9 @@
 	.win-pct-values {
 		display: flex;
 		align-items: baseline;
+		justify-content: space-between;
+		gap: 0.5rem;
 		min-height: 1.15rem;
-	}
-
-	.value-segment {
-		flex: 1 1 0;
-		min-width: 0;
-		display: flex;
-		align-items: baseline;
-	}
-
-	.value-segment.away {
-		justify-content: flex-end;
-	}
-
-	.value-segment.home {
-		justify-content: flex-start;
-	}
-
-	.split-gap {
-		flex-shrink: 0;
-		width: 4px;
 	}
 
 	.team-pct {
@@ -136,11 +113,11 @@
 	}
 
 	.away-pct {
-		padding-right: 0.3rem;
+		text-align: left;
 	}
 
 	.home-pct {
-		padding-left: 0.5rem;
+		text-align: right;
 	}
 
 	.win-pct-track-shell {

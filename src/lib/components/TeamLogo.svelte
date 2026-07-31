@@ -24,6 +24,7 @@
 
 	let src = $state('');
 	let loaded = $state(false);
+	let imgEl = $state<HTMLImageElement | undefined>();
 
 	const imageSize = $derived(
 		tile ? Math.max(12, Math.round(size * 0.68)) : size
@@ -35,6 +36,18 @@
 	$effect(() => {
 		src = isNFLTeamCode(teamCode) ? getTeamLogo(teamCode) : '';
 		loaded = false;
+	});
+
+	// If the browser already has this image cached, the `load` event may
+	// fire (or may have already fired) before we attach the listener below,
+	// which would leave `loaded` stuck at false and the logo invisible.
+	// Explicitly check `complete`/`naturalWidth` whenever the element or src
+	// updates so cached images still show up.
+	$effect(() => {
+		void src;
+		if (imgEl?.complete && imgEl.naturalWidth > 0) {
+			loaded = true;
+		}
 	});
 
 	function handleLoad() {
@@ -60,6 +73,7 @@
 			style:background={tileGradient}
 		>
 			<img
+				bind:this={imgEl}
 				{src}
 				alt={getTeamName(teamCode)}
 				width={imageSize}
@@ -74,6 +88,7 @@
 		</span>
 	{:else}
 		<img
+			bind:this={imgEl}
 			{src}
 			alt={getTeamName(teamCode)}
 			width={size}
@@ -110,6 +125,13 @@
 		object-fit: contain;
 		opacity: 0;
 		transition: opacity 0.15s ease;
+		/* Chromium/Electron can drop the painted pixels of a transitioned
+		   <img> after the opacity transition ends, leaving it invisible
+		   until something forces a repaint (e.g. dragging). Forcing a
+		   dedicated, stable compositor layer prevents that. */
+		will-change: opacity;
+		transform: translateZ(0);
+		backface-visibility: hidden;
 	}
 
 	.team-logo-plain {

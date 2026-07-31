@@ -1,8 +1,8 @@
 <script lang="ts">
 	import TeamLogo from '$lib/components/TeamLogo.svelte';
+	import GameKickoffInfo from '$lib/components/pick/GameKickoffInfo.svelte';
 	import { getTeamName } from '$lib/data/nflTeams';
 	import { isUnderdog, formatWinPct } from '$lib/demo';
-	import { formatGameKickoffTable } from '$lib/gameKickoff';
 	import type { WeekGame } from '$lib/types/game';
 
 	let {
@@ -41,17 +41,19 @@
 	function usedWeekFor(teamId: string): number | undefined {
 		return teamUsageByWeek.get(teamId);
 	}
+
+	function teamTitle(teamId: string): string | undefined {
+		const usedWeek = teamUsageByWeek.get(teamId);
+		if (usedWeek === undefined || usedWeek === activeWeek) return undefined;
+		return `Already selected — Week ${usedWeek}`;
+	}
 </script>
 
 <div class="table-wrap">
 	<table class="game-table">
 		<thead>
 			<tr>
-				<th scope="col" class="col-logo" aria-label="Logo"></th>
-				<th scope="col" class="col-side">H/A</th>
-				<th scope="col" class="col-name">Team</th>
-				<th scope="col" class="col-pct">Win%</th>
-				<th scope="col" class="col-status">Status</th>
+				<th scope="col" class="col-pick">Team</th>
 				<th scope="col" class="col-kickoff">Kickoff</th>
 			</tr>
 		</thead>
@@ -64,7 +66,7 @@
 				]}
 				{#if gi > 0}
 					<tr class="game-divider" aria-hidden="true">
-						<td colspan="6"></td>
+						<td colspan="2"></td>
 					</tr>
 				{/if}
 				{#each teams as { team, side, winPct }, ti}
@@ -73,10 +75,12 @@
 					{@const isUD = winPct !== null && isUnderdog(winPct, underdogThreshold)}
 					{@const usedWk = usedWeekFor(team.id)}
 					{@const stripe = (gi * 2 + ti) % 2 === 0 ? 'stripe-a' : 'stripe-b'}
+					{@const fullName = displayName(team.id, team.name)}
 					<tr
 						class="team-row {state} {stripe}"
 						class:is-selected={isSelected}
 						class:is-submitted={isSubmitted && isSelected}
+						title={teamTitle(team.id)}
 						onclick={() => state !== 'locked' && onSelectTeam?.(game, team.id)}
 						role="button"
 						tabindex={state === 'locked' ? -1 : 0}
@@ -89,33 +93,33 @@
 							}
 						}}
 					>
-						<td class="col-logo">
-							<TeamLogo teamCode={team.id} size={32} />
-						</td>
-						<td class="col-side">
-							<span class="side-label">{side}</span>
-						</td>
-						<td class="col-name">
-							<span class="team-name">{displayName(team.id, team.name)}</span>
-						</td>
-						<td class="col-pct">
-							<span class="win-pct">{formatWinPct(winPct)}</span>
-						</td>
-						<td class="col-status">
-							<span class="badges">
-								{#if isSelected}
-									<span class="badge badge-pick">Your pick</span>
-								{:else if usedWk !== undefined}
-									<span class="badge badge-used">Wk {usedWk}</span>
-								{/if}
-								{#if isUD}
-									<span class="badge badge-ud">Underdawg</span>
-								{/if}
-							</span>
+						<td class="col-pick">
+							<div class="pick-block">
+								<div class="pick-logo">
+									<TeamLogo teamCode={team.id} size={32} />
+								</div>
+								<span class="side-label">{side}</span>
+								<div class="team-line-primary">
+									<span class="team-name">{fullName}</span>
+								</div>
+								<div class="team-line-meta">
+									<span class="win-pct">{formatWinPct(winPct)}</span>
+									<span class="badges">
+										{#if isSelected}
+											<span class="badge badge-pick">Your pick</span>
+										{:else if usedWk !== undefined}
+											<span class="badge badge-used">Wk {usedWk}</span>
+										{/if}
+										{#if isUD}
+											<span class="badge badge-ud">Underdawg</span>
+										{/if}
+									</span>
+								</div>
+							</div>
 						</td>
 						{#if ti === 0}
 							<td class="col-kickoff" rowspan="2">
-								<span class="kickoff-text">{formatGameKickoffTable(game.kickoff_at)}</span>
+								<GameKickoffInfo kickoffAt={game.kickoff_at} align="end" />
 							</td>
 						{/if}
 					</tr>
@@ -127,17 +131,20 @@
 
 <style>
 	.table-wrap {
-		overflow-x: auto;
+		overflow-x: clip;
+		max-width: 100%;
 	}
 
 	.game-table {
 		width: 100%;
+		max-width: 100%;
 		border-collapse: collapse;
 		font-size: 0.875rem;
+		table-layout: fixed;
 	}
 
 	thead th {
-		padding: 0.3rem 0.5rem;
+		padding: 0.3rem 0.45rem;
 		text-align: left;
 		font-size: 0.68rem;
 		font-weight: 700;
@@ -148,88 +155,75 @@
 		white-space: nowrap;
 	}
 
-	.team-row td:not(.col-kickoff) {
-		padding: 0.4rem 0.5rem;
-		vertical-align: middle;
+	.team-row td.col-pick {
+		/* 1px height trick: forces the pick-block child to stretch to full row height */
+		height: 1px;
+		padding: 0;
 		border: none;
+		background: transparent;
+		vertical-align: stretch;
 		cursor: pointer;
-		transition: background 0.12s ease;
-	}
-
-	.team-row.stripe-a td:not(.col-kickoff) {
-		background: color-mix(in srgb, var(--text) 3.5%, var(--surface));
-	}
-
-	.team-row.stripe-b td:not(.col-kickoff) {
-		background: color-mix(in srgb, var(--text) 8%, var(--surface));
 	}
 
 	.team-row td.col-kickoff {
-		padding: 0.4rem 0.5rem;
+		padding: 0.45rem 0.45rem;
 		vertical-align: middle;
 		background: var(--surface-2);
 		border: none;
 		cursor: default;
 	}
 
-	.team-row td:first-child {
-		border-radius: var(--radius) 0 0 var(--radius);
-		padding-left: 0.6rem;
+	.team-row td.col-kickoff:last-child {
+		padding-right: 0.5rem;
 	}
 
-	.team-row td:last-child {
-		border-radius: 0 var(--radius) var(--radius) 0;
-		padding-right: 0.6rem;
+	.pick-block {
+		box-sizing: border-box;
+		height: 100%;
+		min-height: 100%;
+		display: grid;
+		grid-template-columns: auto auto minmax(0, 1fr);
+		grid-template-rows: auto auto;
+		column-gap: 0.45rem;
+		row-gap: 0.2rem;
+		align-items: center;
+		padding: 0.45rem 0.5rem;
+		border: 2px solid transparent;
+		background: color-mix(in srgb, var(--text) 3.5%, var(--surface));
+		transition: background 0.12s ease;
 	}
 
-	.team-row.selectable:hover td:not(.col-kickoff),
-	.team-row.used-elsewhere:hover td:not(.col-kickoff) {
+	.team-row.stripe-b .pick-block {
+		background: color-mix(in srgb, var(--text) 8%, var(--surface));
+	}
+
+	.team-row.selectable:hover .pick-block,
+	.team-row.used-elsewhere:hover .pick-block {
 		background: color-mix(in srgb, var(--text) 12%, var(--surface));
 	}
 
-	.team-row.locked td:not(.col-kickoff) {
+	.team-row.locked .pick-block {
 		opacity: 0.45;
 		cursor: not-allowed;
 	}
 
-	.team-row.used-elsewhere td:not(.col-kickoff) {
-		opacity: 0.8;
+	.team-row.used-elsewhere .pick-block {
+		opacity: 0.92;
+		border-style: dotted;
+		border-color: var(--text-muted);
 	}
 
-	.team-row.is-selected td:not(.col-kickoff),
-	.team-row.is-submitted td:not(.col-kickoff) {
+	.team-row.is-selected .pick-block,
+	.team-row.is-submitted .pick-block {
 		background: color-mix(in srgb, var(--brand-muted) 70%, var(--surface));
-		border-top: 2px solid var(--brand);
-		border-bottom: 2px solid var(--brand);
+		border-style: solid;
+		border-color: var(--brand);
 	}
 
-	.team-row.is-selected td:not(.col-kickoff):first-child,
-	.team-row.is-submitted td:not(.col-kickoff):first-child {
-		border-left: 2px solid var(--brand);
-	}
-
-	.team-row.is-selected td.col-status,
-	.team-row.is-submitted td.col-status {
-		border-right: 2px solid var(--brand);
-		border-top-right-radius: var(--radius);
-		border-bottom-right-radius: var(--radius);
-	}
-
-	:global([data-theme='light']) .team-row.is-selected td:not(.col-kickoff),
-	:global([data-theme='light']) .team-row.is-submitted td:not(.col-kickoff) {
+	:global([data-theme='light']) .team-row.is-selected .pick-block,
+	:global([data-theme='light']) .team-row.is-submitted .pick-block {
 		background: color-mix(in srgb, #d4a72c 22%, var(--surface));
-		border-top-color: #9a7418;
-		border-bottom-color: #9a7418;
-	}
-
-	:global([data-theme='light']) .team-row.is-selected td:not(.col-kickoff):first-child,
-	:global([data-theme='light']) .team-row.is-submitted td:not(.col-kickoff):first-child {
-		border-left-color: #9a7418;
-	}
-
-	:global([data-theme='light']) .team-row.is-selected td.col-status,
-	:global([data-theme='light']) .team-row.is-submitted td.col-status {
-		border-right-color: #9a7418;
+		border-color: #9a7418;
 	}
 
 	.game-divider td {
@@ -238,54 +232,70 @@
 		border: none;
 	}
 
-	.col-logo {
-		width: 2.5rem;
-		min-width: 2.5rem;
-	}
-
-	.col-side {
-		width: 2.5rem;
-		white-space: nowrap;
-	}
-
-	.col-name {
-		min-width: 7rem;
-	}
-
-	.col-pct {
-		width: 3rem;
-		text-align: right;
-		white-space: nowrap;
-	}
-
-	.col-status {
-		min-width: 6rem;
+	.col-pick {
+		min-width: 0;
 	}
 
 	.col-kickoff {
-		width: 7rem;
+		width: 5.75rem;
 		text-align: right;
-		white-space: nowrap;
+		white-space: normal;
 		vertical-align: middle;
 	}
 
+	.pick-logo {
+		grid-column: 1;
+		grid-row: 1 / 3;
+		align-self: center;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
 	.side-label {
-		font-size: 0.68rem;
+		grid-column: 2;
+		grid-row: 1 / 3;
+		align-self: center;
+		font-size: 0.65rem;
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.07em;
 		color: var(--text-muted);
+		line-height: 1.1;
+	}
+
+	.team-line-primary {
+		grid-column: 3;
+		grid-row: 1;
+		min-width: 0;
+		align-self: end;
+	}
+
+	.team-line-meta {
+		grid-column: 3;
+		grid-row: 2;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.35rem;
+		min-width: 0;
+		align-self: start;
 	}
 
 	.team-name {
+		display: block;
 		font-weight: 600;
 		color: var(--text);
+		line-height: 1.25;
+		min-width: 0;
 	}
 
 	.win-pct {
 		font-weight: 700;
 		font-variant-numeric: tabular-nums;
 		color: var(--text);
+		font-size: 0.82rem;
+		flex-shrink: 0;
 	}
 
 	.badges {
@@ -293,10 +303,11 @@
 		flex-wrap: wrap;
 		gap: 0.3rem;
 		align-items: center;
+		min-width: 0;
 	}
 
 	.badge {
-		font-size: 0.6rem;
+		font-size: 0.58rem;
 		font-weight: 800;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
@@ -326,10 +337,46 @@
 		color: var(--brand-text);
 	}
 
-	.kickoff-text {
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: var(--text-muted);
-		font-variant-numeric: tabular-nums;
+	/* Desktop: single-row team layout */
+	@media (min-width: 640px) {
+		.col-kickoff {
+			width: 7rem;
+		}
+
+		.pick-block {
+			grid-template-columns: auto 2.6rem minmax(0, 1fr) 3rem minmax(0, auto);
+			grid-template-rows: auto;
+			column-gap: 0.55rem;
+			row-gap: 0;
+			align-items: center;
+		}
+
+		.pick-logo {
+			grid-column: auto;
+			grid-row: auto;
+		}
+
+		.side-label {
+			grid-column: auto;
+			grid-row: auto;
+			font-size: 0.68rem;
+		}
+
+		.team-line-primary,
+		.team-line-meta {
+			display: contents;
+		}
+
+		.team-name {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			align-self: center;
+		}
+
+		.win-pct {
+			text-align: right;
+			font-size: 0.875rem;
+		}
 	}
 </style>

@@ -205,6 +205,7 @@
 <style>
 	.page-pick {
 		max-width: 40rem;
+		overflow-x: clip;
 	}
 
 	.muted {
@@ -214,6 +215,9 @@
 
 	.pick-section {
 		margin-top: 0.75rem;
+		min-width: 0;
+		max-width: 100%;
+		overflow-x: clip;
 	}
 
 	.pick-error {

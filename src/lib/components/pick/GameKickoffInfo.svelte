@@ -1,53 +1,132 @@
 <script lang="ts">
-	import { getGameKickoffInfo } from '$lib/gameKickoff';
+	import {
+		formatGameKickoffDate,
+		formatGameKickoffTime,
+		formatGameKickoffWeekday,
+		getGameKickoffInfo
+	} from '$lib/gameKickoff';
 
-	let { kickoffAt }: { kickoffAt: string } = $props();
+	let {
+		kickoffAt,
+		align = 'center'
+	}: {
+		kickoffAt: string;
+		/** Horizontal alignment of the stacked kickoff block. */
+		align?: 'center' | 'end';
+	} = $props();
 
 	const info = $derived(getGameKickoffInfo(kickoffAt));
+	const weekday = $derived(formatGameKickoffWeekday(kickoffAt));
+	const date = $derived(formatGameKickoffDate(kickoffAt));
+	const time = $derived(formatGameKickoffTime(kickoffAt));
 </script>
 
 <div
 	class="kickoff"
 	class:highlighted={info.badges.length > 0}
+	class:align-end={align === 'end'}
 >
-	{#each info.badges as badge (badge.id)}
-		<span
-			class="slot-badge slot-{badge.id}"
-			title={badge.label}
-			aria-label={badge.label}
-			data-tooltip={badge.label}
-			tabindex="0"
-		>{badge.short}</span>
-	{/each}
-	<time class="kickoff-time" datetime={kickoffAt}>{info.formatted}</time>
+	{#if info.badges.length > 0}
+		<div class="badge-row">
+			{#each info.badges as badge (badge.id)}
+				<span
+					class="slot-badge slot-{badge.id}"
+					title={badge.label}
+					aria-label={badge.label}
+					data-tooltip={badge.label}
+					tabindex="0"
+				>{badge.short}</span>
+			{/each}
+		</div>
+	{/if}
+	<span class="kickoff-day">{weekday}</span>
+	<span class="kickoff-date">{date}</span>
+	<time class="kickoff-clock" datetime={kickoffAt}>{time}</time>
 </div>
 
 <style>
 	.kickoff {
 		display: flex;
+		flex-direction: column;
+		flex-wrap: nowrap;
 		align-items: center;
 		justify-content: center;
-		flex-wrap: wrap;
-		gap: 0.45rem;
+		gap: 0.15rem;
 		padding: 0.45rem 0.65rem;
 		border-radius: var(--radius);
 		background: var(--surface);
 		border: none;
+		text-align: center;
 	}
 
 	.kickoff.highlighted {
 		padding: 0.5rem 0.7rem;
 	}
 
-	.kickoff-time {
-		font-size: 0.82rem;
-		font-weight: 600;
-		color: var(--text-muted);
-		font-variant-numeric: tabular-nums;
+	.kickoff.align-end {
+		align-items: flex-end;
+		text-align: right;
+		padding: 0;
+		border-radius: 0;
+		background: transparent;
 	}
 
-	.kickoff.highlighted .kickoff-time {
+	.kickoff.align-end.highlighted {
+		padding: 0;
+	}
+
+	.badge-row {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 0.25rem;
+		margin-bottom: 0.1rem;
+	}
+
+	.kickoff.align-end .badge-row {
+		justify-content: flex-end;
+	}
+
+	.kickoff-day {
+		font-size: 0.82rem;
+		font-weight: 700;
 		color: var(--text);
+		line-height: 1.2;
+	}
+
+	.kickoff-date {
+		font-size: 0.78rem;
+		font-weight: 600;
+		color: var(--text);
+		line-height: 1.2;
+	}
+
+	.kickoff-clock {
+		font-size: 0.78rem;
+		font-weight: 700;
+		color: var(--text-muted);
+		font-variant-numeric: tabular-nums;
+		line-height: 1.2;
+	}
+
+	.kickoff.align-end .kickoff-day {
+		font-size: 0.72rem;
+		font-weight: 600;
+	}
+
+	.kickoff.align-end .kickoff-date,
+	.kickoff.align-end .kickoff-clock {
+		font-size: 0.7rem;
+	}
+
+	.kickoff.align-end .kickoff-date {
+		color: var(--text-muted);
+	}
+
+	.kickoff.align-end .slot-badge {
+		padding: 0.1rem 0.35rem;
+		font-size: 0.55rem;
+		letter-spacing: 0.04em;
 	}
 
 	.slot-badge {

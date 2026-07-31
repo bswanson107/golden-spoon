@@ -16,8 +16,8 @@ function liveIndicator(seasonYear = 2026): SeasonIndicator {
 
 let indicator = $state<SeasonIndicator>(liveIndicator());
 
-export function formatSeasonWeekLabel(seasonYear: number, week: number): string {
-	return `${seasonYear} Week ${week}`;
+export function formatSeasonWeekLabel(_seasonYear: number, week: number): string {
+	return `Week ${week}`;
 }
 
 export function getSeasonIndicatorLabel(): string {

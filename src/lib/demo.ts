@@ -319,7 +319,17 @@ function buildStandingsFromPicks(
 			a.display_name.localeCompare(b.display_name)
 	);
 
-	return rows.map((row, index) => ({ ...row, standing_rank: index + 1 }));
+	let rank = 1;
+	return rows.map((row, index) => {
+		if (index > 0) {
+			const prev = rows[index - 1];
+			const tied =
+				row.total_points === prev.total_points &&
+				row.tiebreaker_picked_team_wins === prev.tiebreaker_picked_team_wins;
+			if (!tied) rank = index + 1;
+		}
+		return { ...row, standing_rank: rank };
+	});
 }
 
 export function mergeDemoLeagueView(

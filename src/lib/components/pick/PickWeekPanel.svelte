@@ -330,14 +330,14 @@
 						class:active={viewMode === 'card'}
 						onclick={() => setViewMode('card')}
 						aria-pressed={viewMode === 'card'}
-					>Card View</button>
+					>Card</button>
 					<button
 						type="button"
 						class="view-option"
 						class:active={viewMode === 'table'}
 						onclick={() => setViewMode('table')}
 						aria-pressed={viewMode === 'table'}
-					>Table View</button>
+					>Table</button>
 				</div>
 			</div>
 		</div>
@@ -387,7 +387,7 @@
 		{#if mode === 'live' && (syncTimeLabel || syncNotice)}
 			<p class="sync-meta">
 				{#if syncTimeLabel}
-					Updated {syncTimeLabel}
+					Win % updated {syncTimeLabel}
 				{/if}
 				{#if syncNotice}
 					{#if syncTimeLabel}
@@ -536,17 +536,26 @@
 		-webkit-backdrop-filter: blur(8px);
 		border: none;
 		box-shadow: none;
+		overflow-x: clip;
 	}
 
 	.sticky-top-row {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.75rem;
+		gap: 0.55rem;
+		min-width: 0;
+		max-width: 100%;
+	}
+
+	.sticky-top-row :global(.week-nav) {
+		flex: 1 1 auto;
+		min-width: 0;
 	}
 
 	.view-toggle {
-		flex-shrink: 0;
+		flex: 0 1 auto;
+		min-width: 0;
 	}
 
 	.view-track {
@@ -581,7 +590,7 @@
 	.view-option {
 		position: relative;
 		z-index: 1;
-		padding: 0.35rem 0.7rem;
+		padding: 0.35rem 0.55rem;
 		font-size: 0.72rem;
 		font-weight: 600;
 		font-family: var(--font-body);
@@ -838,6 +847,27 @@
 	}
 
 	@media (max-width: 480px) {
+		.sticky-top-row {
+			flex-wrap: wrap;
+			gap: 0.5rem;
+		}
+
+		.sticky-top-row :global(.week-nav) {
+			flex: 1 1 100%;
+		}
+
+		.view-toggle {
+			flex: 1 1 100%;
+		}
+
+		.view-track {
+			width: 100%;
+		}
+
+		.view-option {
+			padding: 0.4rem 0.5rem;
+		}
+
 		.pick-toolbar {
 			flex-direction: column;
 			align-items: stretch;

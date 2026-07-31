@@ -13,7 +13,8 @@
 	import { isAppAdmin, loadAdminMode, saveAdminMode } from '$lib/admin';
 	import QaBanner from '$lib/components/QaBanner.svelte';
 	import { hydrateQaClock } from '$lib/qaClock.svelte';
-	import { getTheme, initTheme, toggleTheme } from '$lib/themeStore.svelte';
+	import { getTheme, initTheme, setTheme } from '$lib/themeStore.svelte';
+	import { fetchMyLeagues } from '$lib/leagues';
 	import {
 		getSeasonIndicatorLabel,
 		getSeasonIndicatorTooltip,
@@ -29,6 +30,8 @@
 	let adminModeEnabled = $state(false);
 	let menuOpen = $state(false);
 	let menuWrap = $state<HTMLDivElement | null>(null);
+	/** Fallback league when not already on a league route (most recently joined). */
+	let primaryLeagueId = $state<string | null>(null);
 
 	const auth: AuthStore = {
 		get session() {
@@ -64,6 +67,27 @@
 	const seasonLabel = $derived(getSeasonIndicatorLabel());
 	const seasonTooltip = $derived(getSeasonIndicatorTooltip());
 
+	const routeLeagueId = $derived.by(() => {
+		const routeId = $page.route.id ?? '';
+		const id = $page.params.id;
+		if (routeId.startsWith('/league/[id]') && id) return id;
+		return null;
+	});
+
+	const navLeagueId = $derived(routeLeagueId ?? primaryLeagueId);
+
+	const standingsHref = $derived(
+		navLeagueId ? `${base}/league/${navLeagueId}` : `${base}/leagues`
+	);
+	const pickHref = $derived(
+		navLeagueId ? `${base}/league/${navLeagueId}/pick` : `${base}/leagues`
+	);
+
+	const standingsActive = $derived(($page.route.id ?? '') === '/league/[id]');
+	const pickActive = $derived(($page.route.id ?? '') === '/league/[id]/pick');
+
+	const theme = $derived(getTheme());
+
 	onMount(() => {
 		initTheme();
 		initSeasonIndicator();
@@ -94,6 +118,18 @@
 			subscription.unsubscribe();
 			window.removeEventListener('keydown', onKeyDown);
 		};
+	});
+
+	$effect(() => {
+		const user = auth.user;
+		if (auth.loading || !user) {
+			primaryLeagueId = null;
+			return;
+		}
+
+		fetchMyLeagues(user.id).then((result) => {
+			primaryLeagueId = result.leagues[0]?.id ?? null;
+		});
 	});
 
 	afterNavigate(({ to }) => {
@@ -158,9 +194,11 @@
 <div class="app">
 	<QaBanner />
 	<header class="header chrome-bar">
-		<a href="{base}/" class="brand">Golden Spoon</a>
-
-		<div class="header-actions">
+		<div class="brand-block">
+			<a href="{base}/" class="brand">
+				<span class="brand-line">Golden</span>
+				<span class="brand-line">Spoon</span>
+			</a>
 			{#if seasonTooltip}
 				<button type="button" class="season-indicator-wrap" aria-label={seasonLabel}>
 					<span class="season-indicator" aria-hidden="true">{seasonLabel}</span>
@@ -169,37 +207,30 @@
 			{:else}
 				<p class="season-indicator">{seasonLabel}</p>
 			{/if}
-			<button
-				type="button"
-				class="icon-btn theme-toggle"
-				aria-label={getTheme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-				onclick={toggleTheme}
-			>
-				{#if getTheme() === 'dark'}
-					<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-						<circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.75" />
-						<path
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.75"
-							stroke-linecap="round"
-							d="M12 2.5v2.25M12 19.25V21.5M4.5 12H2.25M21.75 12H19.5M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"
-						/>
-					</svg>
-				{:else}
-					<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-						<path
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.75"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M20 14.5A7.5 7.5 0 0 1 9.5 4 6.5 6.5 0 1 0 20 14.5Z"
-						/>
-					</svg>
-				{/if}
-			</button>
+		</div>
 
+		{#if auth.user}
+			<nav class="header-nav" aria-label="Primary">
+				<a
+					href={standingsHref}
+					class="nav-text"
+					class:active={standingsActive}
+					aria-current={standingsActive ? 'page' : undefined}
+				>
+					League
+				</a>
+				<a
+					href={pickHref}
+					class="nav-text"
+					class:active={pickActive}
+					aria-current={pickActive ? 'page' : undefined}
+				>
+					My Picks
+				</a>
+			</nav>
+		{/if}
+
+		<div class="header-actions">
 			<div class="menu-wrap" bind:this={menuWrap}>
 				<button
 					type="button"
@@ -226,15 +257,62 @@
 							<p class="menu-muted">Loading…</p>
 						{:else if auth.user}
 							<p class="menu-user">{auth.user.email}</p>
+							<div class="theme-toggle" role="group" aria-label="Color theme">
+								<div class="theme-track" class:is-dark={theme === 'dark'}>
+									<span class="theme-thumb" aria-hidden="true"></span>
+									<button
+										type="button"
+										class="theme-option"
+										class:active={theme === 'light'}
+										aria-label="Light mode"
+										aria-pressed={theme === 'light'}
+										onclick={() => setTheme('light')}
+									>
+										<svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+											<circle
+												cx="12"
+												cy="12"
+												r="4.5"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="1.75"
+											/>
+											<path
+												fill="none"
+												stroke="currentColor"
+												stroke-width="1.75"
+												stroke-linecap="round"
+												d="M12 2.5v2.25M12 19.25V21.5M4.5 12H2.25M21.75 12H19.5M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"
+											/>
+										</svg>
+									</button>
+									<button
+										type="button"
+										class="theme-option"
+										class:active={theme === 'dark'}
+										aria-label="Dark mode"
+										aria-pressed={theme === 'dark'}
+										onclick={() => setTheme('dark')}
+									>
+										<svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+											<path
+												fill="none"
+												stroke="currentColor"
+												stroke-width="1.75"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M20 14.5A7.5 7.5 0 0 1 9.5 4 6.5 6.5 0 1 0 20 14.5Z"
+											/>
+										</svg>
+									</button>
+								</div>
+							</div>
 							<ul class="menu-list">
 								<li>
 									<a href="{base}/leagues" class="menu-link" onclick={closeMenu}>Leagues</a>
 								</li>
 								<li>
 									<a href="{base}/account" class="menu-link" onclick={closeMenu}>Account</a>
-								</li>
-								<li>
-									<a href="{base}/design" class="menu-link" onclick={closeMenu}>Design demo</a>
 								</li>
 								{#if showAdminToggle}
 									<li>
@@ -264,6 +342,56 @@
 								</li>
 							</ul>
 						{:else}
+							<div class="theme-toggle" role="group" aria-label="Color theme">
+								<div class="theme-track" class:is-dark={theme === 'dark'}>
+									<span class="theme-thumb" aria-hidden="true"></span>
+									<button
+										type="button"
+										class="theme-option"
+										class:active={theme === 'light'}
+										aria-label="Light mode"
+										aria-pressed={theme === 'light'}
+										onclick={() => setTheme('light')}
+									>
+										<svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+											<circle
+												cx="12"
+												cy="12"
+												r="4.5"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="1.75"
+											/>
+											<path
+												fill="none"
+												stroke="currentColor"
+												stroke-width="1.75"
+												stroke-linecap="round"
+												d="M12 2.5v2.25M12 19.25V21.5M4.5 12H2.25M21.75 12H19.5M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"
+											/>
+										</svg>
+									</button>
+									<button
+										type="button"
+										class="theme-option"
+										class:active={theme === 'dark'}
+										aria-label="Dark mode"
+										aria-pressed={theme === 'dark'}
+										onclick={() => setTheme('dark')}
+									>
+										<svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+											<path
+												fill="none"
+												stroke="currentColor"
+												stroke-width="1.75"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M20 14.5A7.5 7.5 0 0 1 9.5 4 6.5 6.5 0 1 0 20 14.5Z"
+											/>
+										</svg>
+									</button>
+								</div>
+							</div>
 							<ul class="menu-list">
 								<li>
 									<a href="{base}/login" class="menu-link" onclick={closeMenu}>Sign in</a>
@@ -272,9 +400,6 @@
 									<a href="{base}/signup" class="menu-link menu-link-primary" onclick={closeMenu}
 										>Sign up</a
 									>
-								</li>
-								<li>
-									<a href="{base}/design" class="menu-link" onclick={closeMenu}>Design demo</a>
 								</li>
 							</ul>
 						{/if}
@@ -294,7 +419,7 @@
 		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
-		--app-header-height: 3.25rem;
+		--app-header-height: 3.75rem;
 	}
 
 	.header {
@@ -304,50 +429,64 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 1rem;
+		gap: 0.75rem;
 		min-height: var(--app-header-height);
-		padding: 0.75rem 1rem;
+		padding: 0.55rem 1rem;
+	}
+
+	.brand-block {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.12rem;
+		min-width: 0;
 	}
 
 	.brand {
+		display: flex;
+		flex-direction: column;
 		font-family: var(--font-display);
+		font-size: 0.95rem;
 		font-weight: 700;
+		line-height: 1.05;
 		color: var(--brand);
 		text-decoration: none;
 		letter-spacing: -0.02em;
 	}
 
-	.header-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.45rem;
+	.brand-line {
+		display: block;
+	}
+
+	.brand:hover {
+		color: var(--brand);
+		filter: brightness(1.05);
+	}
+
+	:global([data-theme='light']) .brand {
+		color: var(--text);
 	}
 
 	.season-indicator {
 		margin: 0;
-		margin-right: 0.35rem;
-		font-size: 0.85rem;
+		font-size: 0.72rem;
 		font-weight: 700;
 		color: var(--text);
-		letter-spacing: 0.01em;
+		letter-spacing: 0.02em;
 		white-space: nowrap;
+		line-height: 1.2;
 	}
 
 	.season-indicator-wrap {
 		position: relative;
 		display: inline-flex;
 		margin: 0;
-		margin-right: 0.35rem;
 		padding: 0;
 		border: none;
 		background: none;
 		font: inherit;
 		cursor: help;
 		outline: none;
-	}
-
-	.season-indicator-wrap .season-indicator {
-		margin-right: 0;
 	}
 
 	.season-indicator-wrap:focus-visible .season-indicator {
@@ -359,7 +498,7 @@
 	.season-tooltip {
 		position: absolute;
 		top: calc(100% + 0.45rem);
-		right: 0;
+		left: 0;
 		z-index: 60;
 		width: max-content;
 		max-width: min(16rem, calc(100vw - 2rem));
@@ -370,7 +509,7 @@
 		font-size: 0.75rem;
 		font-weight: 500;
 		line-height: 1.35;
-		text-align: right;
+		text-align: left;
 		white-space: normal;
 		pointer-events: none;
 		opacity: 0;
@@ -386,13 +525,52 @@
 		visibility: visible;
 	}
 
-	.brand:hover {
-		color: var(--brand);
-		filter: brightness(1.05);
+	.header-nav {
+		position: absolute;
+		left: 50%;
+		transform: translateX(-50%);
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
 	}
 
-	:global([data-theme='light']) .brand {
+	.nav-text {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.4rem 0.85rem;
+		border: none;
+		border-radius: var(--radius);
+		background: transparent;
+		color: var(--text-muted);
+		font-family: var(--font-body);
+		font-size: 0.88rem;
+		font-weight: 600;
+		text-decoration: none;
+		letter-spacing: 0.01em;
+		transition:
+			color 0.15s ease,
+			background 0.15s ease;
+	}
+
+	.nav-text:hover {
 		color: var(--text);
+	}
+
+	.nav-text.active {
+		color: var(--brand-text);
+		background: color-mix(in srgb, var(--brand) 55%, transparent);
+	}
+
+	:global([data-theme='light']) .nav-text.active {
+		color: var(--text);
+		background: color-mix(in srgb, var(--brand) 45%, transparent);
+	}
+
+	.header-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
 	}
 
 	.icon-btn {
@@ -460,6 +638,67 @@
 		padding: 0.35rem 0.55rem;
 		font-size: 0.85rem;
 		color: var(--text-muted);
+	}
+
+	.theme-toggle {
+		margin: 0 0 0.55rem;
+		padding: 0 0.15rem;
+	}
+
+	.theme-track {
+		position: relative;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		padding: 0.2rem;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--text-muted) 14%, var(--surface-2));
+		box-shadow: inset 0 1px 2px color-mix(in srgb, var(--text) 8%, transparent);
+	}
+
+	.theme-thumb {
+		position: absolute;
+		top: 0.2rem;
+		bottom: 0.2rem;
+		left: 0.2rem;
+		width: calc(50% - 0.2rem);
+		border-radius: 999px;
+		background: var(--surface);
+		box-shadow:
+			0 1px 2px color-mix(in srgb, var(--text) 12%, transparent),
+			0 1px 4px color-mix(in srgb, var(--text) 8%, transparent);
+		transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+		pointer-events: none;
+	}
+
+	.theme-track.is-dark .theme-thumb {
+		transform: translateX(100%);
+	}
+
+	.theme-option {
+		position: relative;
+		z-index: 1;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.4rem 0.55rem;
+		border: none;
+		background: transparent;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: color 0.2s ease;
+	}
+
+	.theme-option.active {
+		color: var(--text);
+	}
+
+	.theme-option:not(.active):hover {
+		color: var(--text);
+	}
+
+	.theme-icon {
+		width: 1.05rem;
+		height: 1.05rem;
 	}
 
 	.menu-list {
@@ -536,5 +775,20 @@
 
 	.content {
 		flex: 1;
+	}
+
+	@media (max-width: 420px) {
+		.header-nav {
+			gap: 0.45rem;
+		}
+
+		.nav-text {
+			padding: 0.35rem 0.65rem;
+			font-size: 0.82rem;
+		}
+
+		.season-indicator {
+			font-size: 0.68rem;
+		}
 	}
 </style>

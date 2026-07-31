@@ -207,6 +207,48 @@ export function formatGameKickoffTable(kickoffAt: string): string {
 	}).format(new Date(kickoffAt));
 }
 
+/** Full weekday in ET, e.g. "Wednesday". */
+export function formatGameKickoffWeekday(kickoffAt: string): string {
+	return new Intl.DateTimeFormat('en-US', {
+		timeZone: ET_TIMEZONE,
+		weekday: 'long'
+	}).format(new Date(kickoffAt));
+}
+
+function dayOrdinal(day: number): string {
+	const mod100 = day % 100;
+	if (mod100 >= 11 && mod100 <= 13) return `${day}th`;
+	switch (day % 10) {
+		case 1:
+			return `${day}st`;
+		case 2:
+			return `${day}nd`;
+		case 3:
+			return `${day}rd`;
+		default:
+			return `${day}th`;
+	}
+}
+
+/** Month + ordinal day in ET, e.g. "Sep 9th". */
+export function formatGameKickoffDate(kickoffAt: string): string {
+	const parts = getEasternParts(kickoffAt);
+	const month = new Intl.DateTimeFormat('en-US', {
+		timeZone: ET_TIMEZONE,
+		month: 'short'
+	}).format(new Date(kickoffAt));
+	return `${month} ${dayOrdinal(parts.day)}`;
+}
+
+/** Time in ET, e.g. "12:00 PM". */
+export function formatGameKickoffTime(kickoffAt: string): string {
+	return new Intl.DateTimeFormat('en-US', {
+		timeZone: ET_TIMEZONE,
+		hour: 'numeric',
+		minute: '2-digit'
+	}).format(new Date(kickoffAt));
+}
+
 /** Pick deadline label, e.g. "Thu, Sep 11 · 8:20 PM ET" */
 export function formatPickDeadline(kickoffIso: string): string {
 	const formatted = new Intl.DateTimeFormat('en-US', {

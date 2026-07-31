@@ -26,7 +26,7 @@
 		getNextUpcomingKickoff,
 		getPickCtaState
 	} from '$lib/leaguePickStatus';
-	import { adminKickLeagueMember, fetchLeague, fetchMyLeagues, updateLeagueInviteCode } from '$lib/leagues';
+	import { adminKickLeagueMember, fetchLeague, updateLeagueInviteCode } from '$lib/leagues';
 	import {
 		normalizeUnderdogThreshold,
 		parsePickVisibility,
@@ -68,7 +68,6 @@
 	let inviteError = $state<string | null>(null);
 	let kickingUserId = $state<string | null>(null);
 	let kickError = $state<string | null>(null);
-	let leagueCount = $state<number | null>(null);
 	let rulesOpen = $state(false);
 
 	const leagueId = $derived($page.params.id);
@@ -199,8 +198,6 @@
 
 		return liveWeekGames.find((g) => g.id === pick.game_id) ?? null;
 	});
-
-	const showMyLeaguesBack = $derived(leagueCount !== null && leagueCount > 1);
 
 	$effect(() => {
 		const leagueData = league;
@@ -351,15 +348,6 @@
 	});
 
 	$effect(() => {
-		const user = auth.user;
-		if (auth.loading || !user) return;
-
-		fetchMyLeagues(user.id).then((result) => {
-			leagueCount = result.leagues.length;
-		});
-	});
-
-	$effect(() => {
 		const leagueData = league;
 		const week = viewWeek;
 		if (!leagueData || isDemoSeason(leagueData.season_year)) {
@@ -486,12 +474,6 @@
 </script>
 
 <main class="page page-league">
-	{#if showMyLeaguesBack}
-		<div class="back-nav">
-			<a href="{base}/leagues" class="btn btn-ghost btn-sm">← My leagues</a>
-		</div>
-	{/if}
-
 	{#if auth.loading || loading}
 		<p class="muted">Loading league…</p>
 	{:else if error || !league}
@@ -603,24 +585,24 @@
 		{/if}
 
 		<section class="card">
-			<h2 class="card-title">Standings</h2>
-			{#if leagueView.demoActive}
-				{@const visibleThrough = getMaxVisibleWeek(demoState.simulatedWeek)}
-				<p class="muted demo-view-note">
-					Viewing through {simulatedWeekLabel(demoState.simulatedWeek)}
-					{#if visibleThrough > 0}
-						(weeks 1–{visibleThrough} only)
-					{:else}
-						(no completed weeks yet)
-					{/if}
-				</p>
-			{:else}
-				<p class="muted">Ranked by total points. Tiebreaker = sum of picked teams' season wins (lower is better).</p>
-			{/if}
-			{#if kickError}
-				<p class="auth-error" role="alert">{kickError}</p>
-			{/if}
 			{#if leagueView.standings.length === 0}
+				<h2 class="card-title">Standings</h2>
+				{#if leagueView.demoActive}
+					{@const visibleThrough = getMaxVisibleWeek(demoState.simulatedWeek)}
+					<p class="muted demo-view-note">
+						Viewing through {simulatedWeekLabel(demoState.simulatedWeek)}
+						{#if visibleThrough > 0}
+							(weeks 1–{visibleThrough} only)
+						{:else}
+							(no completed weeks yet)
+						{/if}
+					</p>
+				{:else}
+					<p class="muted">Ranked by total points. Tiebreaker = sum of picked teams' season wins (lower is better).</p>
+				{/if}
+				{#if kickError}
+					<p class="auth-error" role="alert">{kickError}</p>
+				{/if}
 				<p class="muted">No standings yet.</p>
 			{:else}
 				<StandingsTable
@@ -631,13 +613,36 @@
 					commissionerId={league.commissioner_id}
 					{kickingUserId}
 					onKickPlayer={handleKickPlayer}
-				/>
+				>
+					{#snippet stickyTop()}
+						<h2 class="card-title">Standings</h2>
+						{#if leagueView.demoActive}
+							{@const visibleThrough = getMaxVisibleWeek(demoState.simulatedWeek)}
+							<p class="muted demo-view-note">
+								Viewing through {simulatedWeekLabel(demoState.simulatedWeek)}
+								{#if visibleThrough > 0}
+									(weeks 1–{visibleThrough} only)
+								{:else}
+									(no completed weeks yet)
+								{/if}
+							</p>
+						{:else}
+							<p class="muted">
+								Ranked by total points. Tiebreaker = sum of picked teams' season wins (lower is
+								better).
+							</p>
+						{/if}
+						{#if kickError}
+							<p class="auth-error" role="alert">{kickError}</p>
+						{/if}
+					{/snippet}
+				</StandingsTable>
 			{/if}
 		</section>
 
 		<section class="card">
-			<h2 class="card-title">Weekly picks</h2>
 			{#if leagueView.picks.length === 0 && Object.keys(pickSubmissions).length === 0}
+				<h2 class="card-title">Weekly picks</h2>
 				<p class="muted">No picks yet.</p>
 			{:else}
 				<PicksGrid
@@ -648,7 +653,11 @@
 					maxWeek={isDemo ? null : gridMaxWeek}
 					{pickSubmissions}
 					pickVisibility={rulesPickVisibility}
-				/>
+				>
+					{#snippet stickyTop()}
+						<h2 class="card-title">Weekly picks</h2>
+					{/snippet}
+				</PicksGrid>
 			{/if}
 		</section>
 
@@ -689,6 +698,7 @@
 		border-radius: var(--radius);
 		background: var(--surface);
 		box-shadow: var(--shadow-sm);
+		overflow: visible;
 	}
 
 	.card-title {

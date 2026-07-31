@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import type { StandingRow } from '$lib/types/standings';
 	import {
 		DEFAULT_TIEBREAKER_MODE,
@@ -15,7 +16,8 @@
 		adminKickEnabled = false,
 		commissionerId = null,
 		kickingUserId = null,
-		onKickPlayer
+		onKickPlayer,
+		stickyTop
 	}: {
 		standings: StandingRow[];
 		currentUserId?: string | null;
@@ -24,9 +26,16 @@
 		commissionerId?: string | null;
 		kickingUserId?: string | null;
 		onKickPlayer?: (userId: string, displayName: string) => void;
+		stickyTop?: Snippet;
 	} = $props();
 
 	const resolvedTiebreaker = $derived(parseTiebreakerMode(tiebreakerMode));
+
+	/** Hide crowns when every player shares the same points total. */
+	const showLeaderCrowns = $derived(
+		standings.length > 0 &&
+			standings.some((row) => row.total_points !== standings[0].total_points)
+	);
 
 	function formatRecord(row: StandingRow): string {
 		if (row.ties > 0) {
@@ -43,23 +52,38 @@
 	}
 </script>
 
+<div class="standings-sticky-bar">
+	{#if stickyTop}
+		<div class="sticky-top">
+			{@render stickyTop()}
+		</div>
+	{/if}
+	<div class="standings-header-row" aria-hidden="true">
+		<span class="h-rank">#</span>
+		<span class="h-player">Player</span>
+		<span class="h-num">Pts</span>
+		<span class="h-num">W-L</span>
+		<span class="h-num" title={tiebreakerHint(resolvedTiebreaker)}>
+			{tiebreakerShortLabel(resolvedTiebreaker)}
+		</span>
+	</div>
+</div>
+
 <div class="table-wrap">
 	<table class="standings">
-		<thead>
+		<thead class="sr-only">
 			<tr>
 				<th scope="col">#</th>
 				<th scope="col">Player</th>
-				<th scope="col" class="num">Pts</th>
-				<th scope="col" class="num">W-L</th>
-				<th scope="col" class="num" title={tiebreakerHint(resolvedTiebreaker)}>
-					{tiebreakerShortLabel(resolvedTiebreaker)}
-				</th>
+				<th scope="col">Pts</th>
+				<th scope="col">W-L</th>
+				<th scope="col">{tiebreakerShortLabel(resolvedTiebreaker)}</th>
 			</tr>
 		</thead>
 		<tbody>
 			{#each standings as row (row.user_id)}
 				<tr
-					class:leader={row.standing_rank === 1}
+					class:leader={showLeaderCrowns && row.standing_rank === 1}
 					class:me={currentUserId !== null && row.user_id === currentUserId}
 				>
 					<td class="num rank">{row.standing_rank}</td>
@@ -67,8 +91,8 @@
 						<span class="name-row">
 							<span class="name-text">
 								{row.display_name}
-								{#if row.standing_rank === 1}
-									<span class="crown" aria-label="Leader">👑</span>
+								{#if showLeaderCrowns && row.standing_rank === 1}
+									<span class="crown" aria-label="League leader">👑</span>
 								{/if}
 							</span>
 							{#if canKickPlayer(row)}
@@ -95,8 +119,75 @@
 </div>
 
 <style>
+	.standings-sticky-bar {
+		position: sticky;
+		top: var(--app-header-height, 3.75rem);
+		z-index: 40;
+		margin: -1.1rem -1.25rem 0.15rem;
+		padding: 1.1rem 1.25rem 0.45rem;
+		background: var(--surface);
+	}
+
+	.sticky-top {
+		margin-bottom: 0.55rem;
+	}
+
+	.sticky-top :global(.card-title) {
+		margin: 0 0 0.35rem;
+	}
+
+	.sticky-top :global(.muted) {
+		margin: 0 0 0.75rem;
+	}
+
+	.sticky-top :global(.muted:last-child),
+	.sticky-top :global(.auth-error:last-child) {
+		margin-bottom: 0;
+	}
+
+	.standings-header-row {
+		display: grid;
+		grid-template-columns: 6% 36% 16% 16% 26%;
+		align-items: end;
+		gap: 0;
+		color: var(--text-muted);
+		font-weight: 600;
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.h-rank {
+		text-align: center;
+		padding-right: 0.25rem;
+	}
+
+	.h-player {
+		text-align: left;
+		padding-right: 0.5rem;
+	}
+
+	.h-num {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+		line-height: 1.25;
+	}
+
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+
 	.table-wrap {
 		overflow-x: auto;
+		max-width: 100%;
 	}
 
 	.standings {
@@ -114,44 +205,37 @@
 		vertical-align: middle;
 	}
 
-	th:first-child,
 	td:first-child {
 		padding-left: 0;
 	}
 
-	th:last-child,
 	td:last-child {
 		padding-right: 0;
 	}
 
-	th {
-		color: var(--text-muted);
-		font-weight: 600;
-		font-size: 0.75rem;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-	}
-
-	th:nth-child(1) {
+	th:nth-child(1),
+	td:nth-child(1) {
 		width: 6%;
 	}
 
-	th:nth-child(2) {
+	th:nth-child(2),
+	td:nth-child(2) {
 		width: 36%;
 	}
 
-	th:nth-child(3) {
+	th:nth-child(3),
+	td:nth-child(3) {
 		width: 16%;
 	}
 
-	th:nth-child(4) {
+	th:nth-child(4),
+	td:nth-child(4) {
 		width: 16%;
 	}
 
-	th:nth-child(5) {
+	th:nth-child(5),
+	td:nth-child(5) {
 		width: 26%;
-		white-space: normal;
-		line-height: 1.25;
 	}
 
 	.num {

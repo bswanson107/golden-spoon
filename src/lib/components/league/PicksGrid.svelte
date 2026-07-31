@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import TeamLogo from '$lib/components/TeamLogo.svelte';
 	import { qaNow } from '$lib/qaClock.svelte';
 	import {
@@ -24,7 +25,8 @@
 		viewWeek = null,
 		maxWeek = null,
 		pickSubmissions = {},
-		pickVisibility = DEFAULT_PICK_VISIBILITY
+		pickVisibility = DEFAULT_PICK_VISIBILITY,
+		stickyTop
 	}: {
 		picks: LeaguePick[];
 		standings?: { user_id: string; display_name: string; standing_rank: number }[];
@@ -35,6 +37,7 @@
 		/** `${userId}:${weekNumber}` → submission status for hidden picks. */
 		pickSubmissions?: PickSubmissionsByCell;
 		pickVisibility?: PickVisibility | string;
+		stickyTop?: Snippet;
 	} = $props();
 
 	const resolvedPickVisibility = $derived(parsePickVisibility(pickVisibility));
@@ -163,15 +166,59 @@
 			? 'Your pick is saved — team hidden until kickoff'
 			: 'Pick saved — team hidden until kickoff';
 	}
+
+	let headerScrollEl = $state<HTMLDivElement | null>(null);
+	let bodyScrollEl = $state<HTMLDivElement | null>(null);
+	let syncingScroll = false;
+
+	function syncHeaderFromBody() {
+		if (syncingScroll || !headerScrollEl || !bodyScrollEl) return;
+		syncingScroll = true;
+		headerScrollEl.scrollLeft = bodyScrollEl.scrollLeft;
+		syncingScroll = false;
+	}
+
+	function syncBodyFromHeader() {
+		if (syncingScroll || !headerScrollEl || !bodyScrollEl) return;
+		syncingScroll = true;
+		bodyScrollEl.scrollLeft = headerScrollEl.scrollLeft;
+		syncingScroll = false;
+	}
 </script>
 
-<div class="grid-wrap">
+<div class="picks-sticky-bar">
+	{#if stickyTop}
+		<div class="sticky-top">
+			{@render stickyTop()}
+		</div>
+	{/if}
+	<div
+		class="picks-header-scroll"
+		bind:this={headerScrollEl}
+		onscroll={syncBodyFromHeader}
+	>
+		<table class="picks-grid picks-header-grid" aria-hidden="true">
+			<tbody>
+				<tr>
+					<th class="sticky player-col header-player">Player</th>
+					<td class="col-gap"></td>
+					{#each weeks as week (week)}
+						<td class="week-col">{week}</td>
+					{/each}
+				</tr>
+			</tbody>
+		</table>
+	</div>
+</div>
+
+<div class="grid-wrap" bind:this={bodyScrollEl} onscroll={syncHeaderFromBody}>
 	<table class="picks-grid">
-		<thead>
+		<thead class="sr-only">
 			<tr>
-				<th scope="col" class="sticky player-col">Player</th>
+				<th scope="col">Player</th>
+				<th scope="col"></th>
 				{#each weeks as week (week)}
-					<th scope="col" class="week-col">{week}</th>
+					<th scope="col">Week {week}</th>
 				{/each}
 			</tr>
 		</thead>
@@ -179,6 +226,7 @@
 			{#each players as player (player.userId)}
 				<tr>
 					<th scope="row" class="sticky player-col">{player.name}</th>
+					<td class="col-gap"></td>
 					{#each weeks as week (week)}
 						{@const pick = player.picks.get(week)}
 						{@const display =
@@ -227,16 +275,73 @@
 </p>
 
 <style>
-	.grid-wrap {
+	.picks-sticky-bar {
+		--picks-player-w: 7.75rem;
+		--picks-gap-w: 2rem;
+		--picks-week-w: 2.75rem;
+		position: sticky;
+		top: var(--app-header-height, 3.75rem);
+		z-index: 40;
+		margin: -1.1rem -1.25rem 0.15rem;
+		padding: 1.1rem 0 0.35rem;
+		background: var(--surface);
+	}
+
+	.sticky-top {
+		padding: 0 1.25rem;
+		margin-bottom: 0.55rem;
+	}
+
+	.sticky-top :global(.card-title) {
+		margin: 0 0 0.35rem;
+	}
+
+	.picks-header-scroll {
 		overflow-x: auto;
-		max-width: 100%;
+		overflow-y: hidden;
+		scrollbar-width: none;
+	}
+
+	.picks-header-scroll::-webkit-scrollbar {
+		display: none;
+	}
+
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+
+	.grid-wrap {
+		--picks-player-w: 7.75rem;
+		--picks-gap-w: 2rem;
+		--picks-week-w: 2.75rem;
+		overflow-x: auto;
+		/* Bleed to card edges so sticky player col covers the full left edge */
+		margin: 0 -1.25rem;
+		width: calc(100% + 2.5rem);
+		max-width: none;
 	}
 
 	.picks-grid {
 		border-collapse: separate;
 		border-spacing: 0;
+		table-layout: fixed;
 		font-size: 0.8rem;
-		width: auto;
+		width: max-content;
+		margin-right: 1.25rem;
+	}
+
+	.picks-header-grid {
+		color: var(--text-muted);
+		font-weight: 600;
+		font-size: 0.7rem;
 	}
 
 	th,
@@ -248,13 +353,6 @@
 		vertical-align: middle;
 	}
 
-	thead th {
-		color: var(--text-muted);
-		font-weight: 600;
-		font-size: 0.7rem;
-		padding-bottom: 0.5rem;
-	}
-
 	.sticky {
 		position: sticky;
 		left: 0;
@@ -263,31 +361,44 @@
 	}
 
 	.player-col {
+		width: var(--picks-player-w);
+		min-width: var(--picks-player-w);
+		max-width: var(--picks-player-w);
 		text-align: left;
-		min-width: 6.5rem;
-		max-width: 8rem;
 		font-weight: 500;
 		color: var(--text);
+		padding: 0.35rem;
+		padding-left: 1.25rem;
 		padding-right: 0.65rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 		background: var(--surface);
 	}
 
-	.week-col {
-		width: 2.75rem;
-		min-width: 2.75rem;
+	.header-player {
+		z-index: 2;
+		font-weight: 600;
+		color: var(--text-muted);
 	}
 
-	/* Gap between the sticky player name column and the first week column */
-	.player-col + .week-col,
-	.player-col + .pick-cell {
-		padding-left: 2rem;
+	.col-gap {
+		width: var(--picks-gap-w);
+		min-width: var(--picks-gap-w);
+		max-width: var(--picks-gap-w);
+		padding: 0;
+	}
+
+	.week-col,
+	.pick-cell {
+		width: var(--picks-week-w);
+		min-width: var(--picks-week-w);
+		max-width: var(--picks-week-w);
+		padding: 0.2rem;
 	}
 
 	.pick-cell {
-		width: 2.75rem;
-		min-width: 2.75rem;
 		height: 2.75rem;
-		padding: 0.2rem;
 	}
 
 	.pick-ring {

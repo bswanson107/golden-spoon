@@ -178,13 +178,15 @@
 		border-radius: 0;
 		background: transparent;
 		box-shadow: none;
+		min-width: 0;
 	}
 
 	.week-nav.compact .week-select {
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.75rem;
+		gap: 0.5rem;
+		min-width: 0;
 	}
 
 	.week-nav.compact .week-select-label {
@@ -195,10 +197,16 @@
 		letter-spacing: 0.04em;
 	}
 
+	.week-nav.compact .week-controls {
+		min-width: 0;
+	}
+
 	.week-nav.compact .week-controls select {
 		height: 2rem;
-		padding: 0 0.4rem;
+		padding: 0 0.35rem;
 		font-size: 0.8rem;
+		max-width: 100%;
+		min-width: 0;
 	}
 
 	.week-nav.compact .week-step {
