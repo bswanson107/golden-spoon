@@ -411,7 +411,7 @@
 
 <style>
 	.qa-page {
-		max-width: 60rem;
+		max-width: var(--app-content-max, 50rem);
 		margin: 0 auto;
 		padding: 1.25rem 1rem 4rem;
 		display: flex;

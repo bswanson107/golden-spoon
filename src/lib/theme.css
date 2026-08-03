@@ -12,6 +12,10 @@
 
 	--chrome-bg: color-mix(in srgb, var(--bg) 88%, transparent);
 
+	/* Site content shell — header inner + main pages share this */
+	--app-content-max: 50rem;
+	--app-content-gutter: 1rem;
+
 	/* Legacy aliases — remove once all components migrated */
 	--bg-elevated: var(--surface);
 	--accent: var(--brand);

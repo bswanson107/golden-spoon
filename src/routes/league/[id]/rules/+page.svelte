@@ -56,7 +56,7 @@
 
 <style>
 	.page-rules {
-		max-width: 40rem;
+		max-width: var(--app-content-max, 50rem);
 	}
 
 	.muted {

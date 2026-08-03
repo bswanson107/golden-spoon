@@ -523,7 +523,7 @@
 
 <style>
 	.page-admin {
-		max-width: 52rem;
+		max-width: var(--app-content-max, 50rem);
 	}
 
 	.admin-panel + .admin-panel {

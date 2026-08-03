@@ -198,6 +198,28 @@ export const TEAM_OPTIONS = (Object.keys(TEAM_NAMES) as NFLTeamCode[])
 
 export const NFL_TEAM_CODES = Object.keys(NFL_TEAMS) as NFLTeamCode[];
 
+export type NFLConference = 'AFC' | 'NFC';
+export type NFLDivisionName = 'East' | 'North' | 'South' | 'West';
+
+export type NFLDivision = {
+	conference: NFLConference;
+	name: NFLDivisionName;
+	label: string;
+	teams: NFLTeamCode[];
+};
+
+/** NFL divisions in standard standings order (AFC then NFC, East→West). */
+export const NFL_DIVISIONS: NFLDivision[] = [
+	{ conference: 'AFC', name: 'East', label: 'AFC East', teams: ['BUF', 'MIA', 'NE', 'NYJ'] },
+	{ conference: 'AFC', name: 'North', label: 'AFC North', teams: ['BAL', 'CIN', 'CLE', 'PIT'] },
+	{ conference: 'AFC', name: 'South', label: 'AFC South', teams: ['HOU', 'IND', 'JAX', 'TEN'] },
+	{ conference: 'AFC', name: 'West', label: 'AFC West', teams: ['DEN', 'KC', 'LAC', 'LV'] },
+	{ conference: 'NFC', name: 'East', label: 'NFC East', teams: ['DAL', 'NYG', 'PHI', 'WAS'] },
+	{ conference: 'NFC', name: 'North', label: 'NFC North', teams: ['CHI', 'DET', 'GB', 'MIN'] },
+	{ conference: 'NFC', name: 'South', label: 'NFC South', teams: ['ATL', 'CAR', 'NO', 'TB'] },
+	{ conference: 'NFC', name: 'West', label: 'NFC West', teams: ['ARI', 'LAR', 'SF', 'SEA'] }
+];
+
 export function isNFLTeamCode(teamCode: string): teamCode is NFLTeamCode {
 	return teamCode in NFL_TEAMS;
 }

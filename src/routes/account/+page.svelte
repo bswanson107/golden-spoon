@@ -103,7 +103,7 @@
 
 <style>
 	.page-account {
-		max-width: 28rem;
+		max-width: var(--app-content-max, 50rem);
 	}
 
 	.muted {
@@ -124,6 +124,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
+		max-width: 24rem;
 	}
 
 	.account-form label {

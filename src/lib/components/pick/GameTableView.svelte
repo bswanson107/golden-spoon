@@ -103,23 +103,25 @@
 									<span class="team-name">{fullName}</span>
 								</div>
 								<div class="team-line-meta">
+									{#if isSelected || usedWk !== undefined || isUD}
+										<span class="badges">
+											{#if isSelected}
+												<span class="badge badge-pick">Your pick</span>
+											{:else if usedWk !== undefined}
+												<span class="badge badge-used">Wk {usedWk}</span>
+											{/if}
+											{#if isUD}
+												<span class="badge badge-ud">Underdawg</span>
+											{/if}
+										</span>
+									{/if}
 									<span class="win-pct">{formatWinPct(winPct)}</span>
-									<span class="badges">
-										{#if isSelected}
-											<span class="badge badge-pick">Your pick</span>
-										{:else if usedWk !== undefined}
-											<span class="badge badge-used">Wk {usedWk}</span>
-										{/if}
-										{#if isUD}
-											<span class="badge badge-ud">Underdawg</span>
-										{/if}
-									</span>
 								</div>
 							</div>
 						</td>
 						{#if ti === 0}
 							<td class="col-kickoff" rowspan="2">
-								<GameKickoffInfo kickoffAt={game.kickoff_at} align="end" />
+								<GameKickoffInfo kickoffAt={game.kickoff_at} layout="stack" align="end" />
 							</td>
 						{/if}
 					</tr>
@@ -151,7 +153,7 @@
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
 		color: var(--text-muted);
-		border-bottom: 2px solid var(--border);
+		border-bottom: none;
 		white-space: nowrap;
 	}
 
@@ -187,7 +189,7 @@
 		column-gap: 0.45rem;
 		row-gap: 0.2rem;
 		align-items: center;
-		padding: 0.45rem 0.5rem;
+		padding: 0.45rem 0.35rem 0.45rem 0.5rem;
 		border: 2px solid transparent;
 		background: color-mix(in srgb, var(--text) 3.5%, var(--surface));
 		transition: background 0.12s ease;
@@ -277,6 +279,7 @@
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
+		justify-content: flex-start;
 		gap: 0.35rem;
 		min-width: 0;
 		align-self: start;
@@ -290,19 +293,24 @@
 		min-width: 0;
 	}
 
+	/* Mobile: win % first (left), then badges inline after it */
 	.win-pct {
+		order: 1;
 		font-weight: 700;
 		font-variant-numeric: tabular-nums;
 		color: var(--text);
 		font-size: 0.82rem;
 		flex-shrink: 0;
+		text-align: left;
 	}
 
 	.badges {
+		order: 2;
 		display: flex;
-		flex-wrap: wrap;
+		flex-wrap: nowrap;
 		gap: 0.3rem;
 		align-items: center;
+		justify-content: flex-start;
 		min-width: 0;
 	}
 
@@ -344,11 +352,12 @@
 		}
 
 		.pick-block {
-			grid-template-columns: auto 2.6rem minmax(0, 1fr) 3rem minmax(0, auto);
+			grid-template-columns: auto 2.6rem minmax(0, 1fr) auto;
 			grid-template-rows: auto;
 			column-gap: 0.55rem;
 			row-gap: 0;
 			align-items: center;
+			padding-right: 0.35rem;
 		}
 
 		.pick-logo {
@@ -362,9 +371,20 @@
 			font-size: 0.68rem;
 		}
 
-		.team-line-primary,
-		.team-line-meta {
+		.team-line-primary {
 			display: contents;
+		}
+
+		/* Keep meta as one trailing flex cell: badges then win % (right-aligned) */
+		.team-line-meta {
+			grid-column: auto;
+			grid-row: auto;
+			display: flex;
+			flex-wrap: nowrap;
+			align-items: center;
+			justify-content: flex-end;
+			gap: 0.4rem;
+			align-self: center;
 		}
 
 		.team-name {
@@ -374,9 +394,16 @@
 			align-self: center;
 		}
 
+		.badges {
+			order: 1;
+			justify-content: flex-end;
+		}
+
 		.win-pct {
-			text-align: right;
+			order: 2;
 			font-size: 0.875rem;
+			min-width: 2.5rem;
+			text-align: right;
 		}
 	}
 </style>

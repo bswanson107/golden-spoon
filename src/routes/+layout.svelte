@@ -194,6 +194,7 @@
 <div class="app">
 	<QaBanner />
 	<header class="header chrome-bar">
+		<div class="header-inner">
 		<div class="brand-block">
 			<a href="{base}/" class="brand">
 				<span class="brand-line">Golden</span>
@@ -407,6 +408,7 @@
 				{/if}
 			</div>
 		</div>
+		</div>
 	</header>
 
 	<div class="content">
@@ -426,12 +428,20 @@
 		position: sticky;
 		top: 0;
 		z-index: 50;
+		width: 100%;
+	}
+
+	.header-inner {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.75rem;
+		width: 100%;
+		max-width: var(--app-content-max, 50rem);
 		min-height: var(--app-header-height);
-		padding: 0.55rem 1rem;
+		margin: 0 auto;
+		padding: 0.55rem var(--app-content-gutter, 1rem);
+		box-sizing: border-box;
 	}
 
 	.brand-block {

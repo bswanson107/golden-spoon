@@ -38,7 +38,9 @@
 
 <section class="week-nav" class:compact>
 	<div class="week-select">
-		<span class="week-select-label">{label}</span>
+		{#if !compact && label}
+			<span class="week-select-label">{label}</span>
+		{/if}
 		<div class="week-controls">
 			<button
 				type="button"
@@ -51,6 +53,7 @@
 			</button>
 			<select
 				value={viewWeek}
+				aria-label={label || 'Week'}
 				onchange={(e) => onWeekChange(Number((e.currentTarget as HTMLSelectElement).value))}
 			>
 				{#each weekOptions as week (week)}
@@ -184,21 +187,16 @@
 	.week-nav.compact .week-select {
 		flex-direction: row;
 		align-items: center;
-		justify-content: space-between;
+		justify-content: flex-start;
 		gap: 0.5rem;
 		min-width: 0;
 	}
 
-	.week-nav.compact .week-select-label {
-		flex-shrink: 0;
-		font-size: 0.78rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-	}
-
 	.week-nav.compact .week-controls {
+		display: flex;
+		flex: 1 1 auto;
 		min-width: 0;
+		width: 100%;
 	}
 
 	.week-nav.compact .week-controls select {
@@ -206,7 +204,7 @@
 		padding: 0 0.35rem;
 		font-size: 0.8rem;
 		max-width: 100%;
-		min-width: 0;
+		min-width: 5.5rem;
 	}
 
 	.week-nav.compact .week-step {

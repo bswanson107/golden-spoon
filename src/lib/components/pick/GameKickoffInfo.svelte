@@ -8,10 +8,13 @@
 
 	let {
 		kickoffAt,
+		layout = 'inline',
 		align = 'center'
 	}: {
 		kickoffAt: string;
-		/** Horizontal alignment of the stacked kickoff block. */
+		/** Inline for cards/dashboard; stack for table view. */
+		layout?: 'inline' | 'stack';
+		/** Horizontal alignment (mainly for stacked table cells). */
 		align?: 'center' | 'end';
 	} = $props();
 
@@ -23,8 +26,10 @@
 
 <div
 	class="kickoff"
-	class:highlighted={info.badges.length > 0}
+	class:layout-inline={layout === 'inline'}
+	class:layout-stack={layout === 'stack'}
 	class:align-end={align === 'end'}
+	class:highlighted={info.badges.length > 0}
 >
 	{#if info.badges.length > 0}
 		<div class="badge-row">
@@ -39,14 +44,44 @@
 			{/each}
 		</div>
 	{/if}
-	<span class="kickoff-day">{weekday}</span>
-	<span class="kickoff-date">{date}</span>
-	<time class="kickoff-clock" datetime={kickoffAt}>{time}</time>
+	{#if layout === 'inline'}
+		<span class="kickoff-meta">
+			<span class="kickoff-day">{weekday}</span>
+			<span class="sep" aria-hidden="true">·</span>
+			<span class="kickoff-date">{date}</span>
+			<span class="sep" aria-hidden="true">·</span>
+			<time class="kickoff-clock" datetime={kickoffAt}>{time}</time>
+		</span>
+	{:else}
+		<span class="kickoff-day">{weekday}</span>
+		<span class="kickoff-date">{date}</span>
+		<time class="kickoff-clock" datetime={kickoffAt}>{time}</time>
+	{/if}
 </div>
 
 <style>
 	.kickoff {
 		display: flex;
+		border: none;
+	}
+
+	.kickoff.layout-inline {
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		gap: 0.4rem 0.5rem;
+		padding: 0.45rem 0.65rem;
+		border-radius: var(--radius);
+		background: var(--surface);
+		text-align: center;
+	}
+
+	.kickoff.layout-inline.highlighted {
+		padding: 0.5rem 0.7rem;
+	}
+
+	.kickoff.layout-stack {
 		flex-direction: column;
 		flex-wrap: nowrap;
 		align-items: center;
@@ -55,15 +90,10 @@
 		padding: 0.45rem 0.65rem;
 		border-radius: var(--radius);
 		background: var(--surface);
-		border: none;
 		text-align: center;
 	}
 
-	.kickoff.highlighted {
-		padding: 0.5rem 0.7rem;
-	}
-
-	.kickoff.align-end {
+	.kickoff.layout-stack.align-end {
 		align-items: flex-end;
 		text-align: right;
 		padding: 0;
@@ -71,7 +101,7 @@
 		background: transparent;
 	}
 
-	.kickoff.align-end.highlighted {
+	.kickoff.layout-stack.align-end.highlighted {
 		padding: 0;
 	}
 
@@ -80,11 +110,25 @@
 		flex-wrap: wrap;
 		justify-content: center;
 		gap: 0.25rem;
-		margin-bottom: 0.1rem;
 	}
 
 	.kickoff.align-end .badge-row {
 		justify-content: flex-end;
+	}
+
+	.kickoff-meta {
+		display: inline-flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		justify-content: center;
+		gap: 0.3rem;
+		min-width: 0;
+	}
+
+	.sep {
+		color: var(--text-muted);
+		font-weight: 600;
+		line-height: 1;
 	}
 
 	.kickoff-day {
@@ -109,21 +153,27 @@
 		line-height: 1.2;
 	}
 
-	.kickoff.align-end .kickoff-day {
+	.kickoff.layout-inline .kickoff-day,
+	.kickoff.layout-inline .kickoff-date,
+	.kickoff.layout-inline .kickoff-clock {
+		font-size: 0.82rem;
+	}
+
+	.kickoff.layout-stack.align-end .kickoff-day {
 		font-size: 0.72rem;
 		font-weight: 600;
 	}
 
-	.kickoff.align-end .kickoff-date,
-	.kickoff.align-end .kickoff-clock {
+	.kickoff.layout-stack.align-end .kickoff-date,
+	.kickoff.layout-stack.align-end .kickoff-clock {
 		font-size: 0.7rem;
 	}
 
-	.kickoff.align-end .kickoff-date {
+	.kickoff.layout-stack.align-end .kickoff-date {
 		color: var(--text-muted);
 	}
 
-	.kickoff.align-end .slot-badge {
+	.kickoff.layout-stack.align-end .slot-badge {
 		padding: 0.1rem 0.35rem;
 		font-size: 0.55rem;
 		letter-spacing: 0.04em;

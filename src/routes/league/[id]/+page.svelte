@@ -571,14 +571,16 @@
 						</p>
 					</div>
 				{:else}
-					<div class="invite-row">
+					<div class="invite-row invite-display">
 						<code class="invite-code">{league.invite_code}</code>
-						<button type="button" class="btn btn-ghost btn-sm" onclick={copyInviteCode}>
-							{copied ? 'Copied!' : 'Copy'}
-						</button>
-						<button type="button" class="btn btn-ghost btn-sm" onclick={startEditInvite}>
-							Edit
-						</button>
+						<div class="invite-actions">
+							<button type="button" class="btn btn-ghost btn-sm" onclick={copyInviteCode}>
+								{copied ? 'Copied!' : 'Copy'}
+							</button>
+							<button type="button" class="btn btn-ghost btn-sm" onclick={startEditInvite}>
+								Edit
+							</button>
+						</div>
 					</div>
 				{/if}
 			</section>
@@ -682,7 +684,7 @@
 
 <style>
 	.page-league {
-		max-width: 56rem;
+		max-width: var(--app-content-max, 50rem);
 	}
 
 	.muted {
@@ -697,7 +699,7 @@
 		border: none;
 		border-radius: var(--radius);
 		background: var(--surface);
-		box-shadow: var(--shadow-sm);
+		box-shadow: var(--shadow);
 		overflow: visible;
 	}
 
@@ -713,6 +715,12 @@
 		flex-wrap: wrap;
 		gap: 0.75rem;
 		margin-top: 0.75rem;
+	}
+
+	.invite-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
 	}
 
 	.invite-edit {
@@ -753,6 +761,13 @@
 
 	:global([data-theme='light']) .invite-code {
 		color: var(--text);
+	}
+
+	@media (max-width: 480px) {
+		.invite-display {
+			flex-direction: column;
+			align-items: flex-start;
+		}
 	}
 
 	.commissioner-tools-row {

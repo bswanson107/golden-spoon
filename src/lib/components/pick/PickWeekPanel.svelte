@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
 	import GameCard from '$lib/components/pick/GameCard.svelte';
 	import GameTableView from '$lib/components/pick/GameTableView.svelte';
 	import TeamLogo from '$lib/components/TeamLogo.svelte';
@@ -36,7 +35,9 @@
 		userPicksByWeek = new Map<number, UserLeaguePick>(),
 		underdogThreshold = DEFAULT_UNDERDOG_THRESHOLD,
 		saving = false,
-		onSavePick
+		onSavePick,
+		onOpenSeasonOutlook,
+		viewMode = 'card'
 	}: {
 		mode: 'demo' | 'live';
 		seasonYear: number;
@@ -51,6 +52,8 @@
 		underdogThreshold?: number;
 		saving?: boolean;
 		onSavePick: (week: number, pick: DemoPick, options?: SavePickOptions) => void | Promise<void>;
+		onOpenSeasonOutlook?: () => void;
+		viewMode?: 'card' | 'table';
 	} = $props();
 
 	let games = $state<WeekGame[]>([]);
@@ -60,21 +63,6 @@
 	let reuseConfirm = $state<{ pick: DemoPick; clearWeek: number } | null>(null);
 	let lastSyncAt = $state<string | null>(null);
 	let syncNotice = $state<string | null>(null);
-
-	const VIEW_MODE_KEY = 'golden-spoon-pick-view';
-	type ViewMode = 'card' | 'table';
-
-	function readViewMode(): ViewMode {
-		if (!browser) return 'card';
-		return localStorage.getItem(VIEW_MODE_KEY) === 'table' ? 'table' : 'card';
-	}
-
-	let viewMode = $state<ViewMode>(readViewMode());
-
-	function setViewMode(mode: ViewMode) {
-		viewMode = mode;
-		if (browser) localStorage.setItem(VIEW_MODE_KEY, mode);
-	}
 
 	const activeWeek = $derived(viewWeek);
 
@@ -312,33 +300,25 @@
 {:else}
 	<div class="pick-sticky-bar">
 		<div class="sticky-top-row">
-			<WeekNavigator
-				{viewWeek}
-				onWeekChange={onWeekChange}
-				label={weekNavLabel}
-				compact
-				showReset={showWeekReset}
-				canReset={canWeekReset}
-				onReset={onWeekReset}
-			/>
-			<div class="view-toggle" role="group" aria-label="Game display">
-				<div class="view-track" class:is-table={viewMode === 'table'}>
-					<span class="view-thumb" aria-hidden="true"></span>
-					<button
-						type="button"
-						class="view-option"
-						class:active={viewMode === 'card'}
-						onclick={() => setViewMode('card')}
-						aria-pressed={viewMode === 'card'}
-					>Card</button>
-					<button
-						type="button"
-						class="view-option"
-						class:active={viewMode === 'table'}
-						onclick={() => setViewMode('table')}
-						aria-pressed={viewMode === 'table'}
-					>Table</button>
-				</div>
+			{#if onOpenSeasonOutlook}
+				<button
+					type="button"
+					class="season-outlook-btn"
+					onclick={onOpenSeasonOutlook}
+				>
+					Season Outlook
+				</button>
+			{/if}
+			<div class="sticky-controls">
+				<WeekNavigator
+					{viewWeek}
+					onWeekChange={onWeekChange}
+					label={weekNavLabel}
+					compact
+					showReset={showWeekReset}
+					canReset={canWeekReset}
+					onReset={onWeekReset}
+				/>
 			</div>
 		</div>
 
@@ -546,69 +526,52 @@
 		gap: 0.55rem;
 		min-width: 0;
 		max-width: 100%;
+		width: 100%;
 	}
 
-	.sticky-top-row :global(.week-nav) {
-		flex: 1 1 auto;
-		min-width: 0;
-	}
-
-	.view-toggle {
+	.season-outlook-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 		flex: 0 1 auto;
 		min-width: 0;
-	}
-
-	.view-track {
-		position: relative;
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		padding: 0.2rem;
-		border-radius: 999px;
-		background: color-mix(in srgb, var(--text-muted) 14%, var(--surface-2));
-		box-shadow: inset 0 1px 2px color-mix(in srgb, var(--text) 8%, transparent);
-	}
-
-	.view-thumb {
-		position: absolute;
-		top: 0.2rem;
-		bottom: 0.2rem;
-		left: 0.2rem;
-		width: calc(50% - 0.2rem);
-		border-radius: 999px;
-		background: var(--surface);
-		box-shadow:
-			0 1px 2px color-mix(in srgb, var(--text) 12%, transparent),
-			0 1px 4px color-mix(in srgb, var(--text) 8%, transparent);
-		transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-		pointer-events: none;
-	}
-
-	.view-track.is-table .view-thumb {
-		transform: translateX(100%);
-	}
-
-	.view-option {
-		position: relative;
-		z-index: 1;
-		padding: 0.35rem 0.55rem;
-		font-size: 0.72rem;
+		height: 2rem;
+		padding: 0 0.65rem;
+		border: none;
+		border-radius: var(--radius);
+		background: var(--surface-2);
+		color: var(--text);
+		font-size: 0.78rem;
 		font-weight: 600;
 		font-family: var(--font-body);
-		border: none;
-		background: transparent;
-		color: var(--text-muted);
+		line-height: 1;
 		cursor: pointer;
+		box-shadow: var(--shadow-sm);
 		white-space: nowrap;
-		transition: color 0.2s ease;
+		box-sizing: border-box;
 	}
 
-	.view-option.active {
-		color: var(--text);
-		font-weight: 700;
+	.season-outlook-btn:hover {
+		color: var(--link);
 	}
 
-	.view-option:not(.active):hover {
-		color: var(--text);
+	.sticky-controls {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 0.55rem;
+		margin-left: auto;
+		min-width: 0;
+		flex: 0 1 auto;
+	}
+
+	.sticky-controls :global(.week-nav) {
+		flex: 0 0 auto;
+		min-width: 0;
+	}
+
+	.sticky-controls :global(.week-controls) {
+		align-items: center;
 	}
 
 	.pick-toolbar {
@@ -776,6 +739,8 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+		/* Room for game-card --shadow-lg (4px) so it isn't clipped */
+		padding: 0 0.3rem 0.3rem;
 	}
 
 	.modal-backdrop {
@@ -848,24 +813,14 @@
 
 	@media (max-width: 480px) {
 		.sticky-top-row {
-			flex-wrap: wrap;
+			align-items: center;
 			gap: 0.5rem;
 		}
 
-		.sticky-top-row :global(.week-nav) {
-			flex: 1 1 100%;
-		}
-
-		.view-toggle {
-			flex: 1 1 100%;
-		}
-
-		.view-track {
-			width: 100%;
-		}
-
-		.view-option {
-			padding: 0.4rem 0.5rem;
+		.season-outlook-btn {
+			padding: 0 0.55rem;
+			font-size: 0.72rem;
+			max-width: 7.5rem;
 		}
 
 		.pick-toolbar {

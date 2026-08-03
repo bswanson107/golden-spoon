@@ -56,10 +56,10 @@
 </script>
 
 {#if pickCta.kind === 'needs_pick'}
-	<section class="dashboard dashboard-action" aria-labelledby="pick-action-heading">
+	<section class="dashboard dashboard-action" aria-label="Make your pick for Week {week}">
 		<div class="action-body">
 			<p class="action-eyebrow">Week {week}</p>
-			<h2 id="pick-action-heading" class="action-title">Make your pick</h2>
+			<a href={pickUrl} class="btn btn-primary action-cta">Make your pick</a>
 			<PickKickoffCountdown kickoffAt={pickCta.nextKickoff} />
 			<p class="action-copy">
 				{#if pickCta.gamesStarted > 0}
@@ -69,20 +69,20 @@
 				{/if}
 			</p>
 		</div>
-		<a href={pickUrl} class="btn btn-primary">Pick Selections</a>
 	</section>
 {:else if pickCta.kind === 'submitted' && userPick}
 	<section class="dashboard dashboard-pick" aria-labelledby="pick-hero-heading">
 		<div class="pick-hero">
-			<a href={pickUrl} class="btn btn-ghost btn-sm change-link">Pick Selections</a>
-
 			<div class="pick-logo">
 				<TeamLogo teamCode={userPick.team_id} size={100} className="pick-hero-logo" />
 			</div>
 
 			<div class="pick-content">
 				<div class="pick-badges">
-					<span class="badge badge-pick">Your pick</span>
+					<div class="pick-primary-badges">
+						<span class="badge badge-pick">Your pick</span>
+						<a href={pickUrl} class="btn btn-ghost btn-sm change-link">Change pick</a>
+					</div>
 					{#if userPick.is_underdog_at_pick}
 						<span class="badge badge-underdawg">Underdawg · 2 pts</span>
 					{/if}
@@ -114,7 +114,7 @@
 
 		{#if game}
 			<div class="pick-details">
-				<GameKickoffInfo kickoffAt={game.kickoff_at} />
+				<GameKickoffInfo kickoffAt={game.kickoff_at} layout="inline" />
 				<WinPctBar
 					awayTeamCode={game.away.id}
 					homeTeamCode={game.home.id}
@@ -127,12 +127,8 @@
 			</div>
 		{:else if userPick.kickoff_at}
 			<div class="pick-details">
-				<GameKickoffInfo kickoffAt={userPick.kickoff_at} />
+				<GameKickoffInfo kickoffAt={userPick.kickoff_at} layout="inline" />
 			</div>
-		{/if}
-
-		{#if pickCta.changeable}
-			<p class="pick-note">Your pick stays hidden from others until kickoff.</p>
 		{/if}
 	</section>
 {:else if pickCta.kind === 'closed'}
@@ -167,20 +163,15 @@
 	}
 
 	.dashboard-action {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 1.25rem;
 		background: var(--brand-muted);
 	}
 
 	.action-body {
-		flex: 1;
 		min-width: 0;
 	}
 
 	.action-eyebrow {
-		margin: 0 0 0.25rem;
+		margin: 0 0 0.65rem;
 		font-size: 0.78rem;
 		font-weight: 700;
 		text-transform: uppercase;
@@ -188,12 +179,12 @@
 		color: var(--text-muted);
 	}
 
-	.action-title {
-		margin: 0 0 0.4rem;
-		font-family: var(--font-display);
-		font-size: 1.65rem;
-		line-height: 1.1;
-		color: var(--text);
+	.action-cta {
+		display: flex;
+		width: 100%;
+		justify-content: center;
+		box-sizing: border-box;
+		margin-bottom: 0.75rem;
 	}
 
 	.action-copy {
@@ -245,9 +236,17 @@
 	.pick-badges {
 		display: flex;
 		flex-wrap: wrap;
+		align-items: center;
 		gap: 0.4rem;
 		margin-bottom: 0.45rem;
-		padding-right: 6.5rem;
+	}
+
+	.pick-primary-badges {
+		display: flex;
+		align-items: stretch;
+		gap: 0.4rem;
+		width: 100%;
+		min-width: 0;
 	}
 
 	.pick-team {
@@ -272,14 +271,17 @@
 	}
 
 	.badge {
-		display: inline-block;
+		display: inline-flex;
+		align-items: center;
 		font-size: 0.72rem;
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
+		line-height: 1.25;
 		padding: 0.22rem 0.45rem;
 		border-radius: var(--radius);
 		box-shadow: var(--shadow-sm);
+		box-sizing: border-box;
 	}
 
 	.badge-pick {
@@ -318,9 +320,18 @@
 	}
 
 	.change-link {
-		position: absolute;
-		top: 0;
-		right: 0;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		align-self: stretch;
+		margin-left: auto;
+		padding: 0.22rem 0.45rem;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		line-height: 1.25;
+		box-sizing: border-box;
 	}
 
 	.pick-details {
@@ -329,12 +340,6 @@
 		gap: 0.75rem;
 		padding-top: 0.25rem;
 		border-top: 1px solid var(--border);
-	}
-
-	.pick-note {
-		margin: 0;
-		font-size: 0.85rem;
-		color: var(--text-muted);
 	}
 
 	.dashboard-closed {
@@ -364,25 +369,8 @@
 	}
 
 	@media (max-width: 640px) {
-		.dashboard-action {
-			flex-direction: column;
-			align-items: stretch;
-		}
-
-		.pick-badges {
-			padding-right: 0;
-		}
-
 		.pick-hero {
 			flex-wrap: wrap;
-		}
-
-		.change-link {
-			position: static;
-			align-self: flex-start;
-			width: 100%;
-			margin-top: 0.5rem;
-			text-align: center;
 		}
 	}
 </style>

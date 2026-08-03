@@ -75,7 +75,7 @@
 </script>
 
 <article class="game-card" class:has-result={resultLine !== null}>
-	<GameKickoffInfo kickoffAt={game.kickoff_at} />
+	<GameKickoffInfo kickoffAt={game.kickoff_at} layout="inline" />
 
 	{#if resultLine}
 		<p class="final-score">{resultLine}</p>
@@ -255,9 +255,9 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		flex: 1;
+		flex: 0 0 auto;
 		width: 100%;
-		min-height: 5.75rem;
+		height: 5.75rem;
 		padding: 0.15rem 0;
 	}
 
