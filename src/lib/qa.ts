@@ -60,6 +60,7 @@ export async function qaResetAll(seasonYear: number): Promise<{ error: string | 
 export type QaProcessingResult = {
 	kickoffLocksApplied: number;
 	autoOrMissedAssigned: number;
+	assignErrors?: number;
 };
 
 /**

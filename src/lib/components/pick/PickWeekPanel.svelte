@@ -37,7 +37,8 @@
 		saving = false,
 		onSavePick,
 		onOpenSeasonOutlook,
-		viewMode = 'card'
+		viewMode = 'card',
+		readOnly = false
 	}: {
 		mode: 'demo' | 'live';
 		seasonYear: number;
@@ -54,6 +55,8 @@
 		onSavePick: (week: number, pick: DemoPick, options?: SavePickOptions) => void | Promise<void>;
 		onOpenSeasonOutlook?: () => void;
 		viewMode?: 'card' | 'table';
+		/** Browse matchups without selecting or saving a pick. */
+		readOnly?: boolean;
 	} = $props();
 
 	let games = $state<WeekGame[]>([]);
@@ -91,7 +94,7 @@
 	});
 
 	const pickingEnabled = $derived(
-		mode === 'demo' ? weekOpen : canChangeLivePick
+		readOnly ? false : mode === 'demo' ? weekOpen : canChangeLivePick
 	);
 
 	const showResults = $derived.by(() => {
@@ -266,13 +269,14 @@
 	});
 
 	function savePick(pick: DemoPick, clearWeek: number | null) {
+		if (readOnly) return;
 		const options = clearWeek !== null ? { clearWeek } : undefined;
 		void onSavePick(activeWeek, pick, options);
 		reuseConfirm = null;
 	}
 
 	function handleSelectTeam(game: WeekGame, teamId: string) {
-		if (!pickingEnabled || saving) return;
+		if (readOnly || !pickingEnabled || saving) return;
 		const pick = buildDemoPick(game, teamId, underdogThreshold, mode === 'live');
 		if (!pick) return;
 
@@ -333,6 +337,9 @@
 					{#if saving}
 						<span class="status-indicator ready" aria-hidden="true"></span>
 						<span class="status-text">Saving pick…</span>
+					{:else if readOnly}
+						<span class="status-indicator locked" aria-hidden="true"></span>
+						<span class="status-text">Browse matchups · picking is disabled in this demo</span>
 					{:else if pickSubmitted && currentPick}
 						<TeamLogo teamCode={currentPick.team_id} size={22} />
 						<span class="status-text">

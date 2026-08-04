@@ -48,7 +48,7 @@
 	}
 </script>
 
-<main class="page">
+<main class="page page-create">
 	<h1 class="page-title">Create league</h1>
 	<p class="page-subtitle">You'll be the commissioner and can share the invite code.</p>
 
@@ -58,7 +58,7 @@
 			<input
 				type="text"
 				name="name"
-				placeholder="Geiger Family Pool"
+				placeholder="Scaglione Family Pool"
 				required
 				maxlength="80"
 				bind:value={name}
@@ -71,7 +71,7 @@
 			<input
 				type="text"
 				name="inviteCode"
-				placeholder="e.g. geiger-family"
+				placeholder="e.g. scaglione-family"
 				required
 				minlength="3"
 				maxlength="32"
@@ -204,6 +204,24 @@
 </main>
 
 <style>
+	.page-create {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+	}
+
+	.page-create .auth-form {
+		width: 100%;
+		max-width: 24rem;
+		text-align: left;
+	}
+
+	.page-create .auth-footer {
+		width: 100%;
+		max-width: 24rem;
+	}
+
 	.muted {
 		color: var(--text-muted);
 		font-size: 0.88rem;

@@ -16,7 +16,10 @@ export type CreateLeagueRules = {
 };
 
 const LEAGUE_SELECT =
-	'id, name, season_year, commissioner_id, invite_code, is_active, created_at, underdog_threshold_pct, tiebreaker_mode, pick_visibility';
+	'id, name, season_year, commissioner_id, invite_code, is_active, is_public_demo, created_at, underdog_threshold_pct, tiebreaker_mode, pick_visibility';
+
+/** Seeded 2025 Scaglione Family Pool — public demo, no invite required. */
+export const PUBLIC_DEMO_LEAGUE_ID = 'b0000001-0000-4000-8000-000000000001';
 
 /** Normalize for storage/lookup: trim + lowercase. */
 export function normalizeInviteCode(raw: string): string {
@@ -60,11 +63,40 @@ function mapMembership(row: {
 	};
 }
 
+export async function ensurePublicDemoMemberships(): Promise<{ error: string | null }> {
+	const supabase = getSupabase();
+
+	const { error } = await supabase.rpc('ensure_public_demo_memberships');
+
+	if (error) {
+		const missingRpc =
+			error.code === 'PGRST202' ||
+			error.message.includes('ensure_public_demo_memberships') ||
+			error.message.includes('Could not find the function') ||
+			error.message.includes('is_public_demo');
+
+		if (missingRpc) {
+			return {
+				error:
+					'Public demo league is not set up on the database yet. Run migration 026 in Supabase SQL Editor, or locally: npm run db:apply-public-demo-league (requires SUPABASE_DB_URL in .env).'
+			};
+		}
+		return { error: error.message };
+	}
+
+	return { error: null };
+}
+
 export async function fetchMyLeagues(userId: string): Promise<{
 	leagues: LeagueWithRole[];
 	error: string | null;
 }> {
 	const supabase = getSupabase();
+
+	const demoJoin = await ensurePublicDemoMemberships();
+	if (demoJoin.error && !demoJoin.error.includes('not set up on the database yet')) {
+		return { leagues: [], error: demoJoin.error };
+	}
 
 	const { data, error } = await supabase
 		.from('league_members')
@@ -81,12 +113,28 @@ export async function fetchMyLeagues(userId: string): Promise<{
 		.order('joined_at', { ascending: false });
 
 	if (error) {
+		// Older DBs without is_public_demo still work if the column select fails —
+		// surface the original error so migration messaging is clear.
+		if (error.message.includes('is_public_demo') && demoJoin.error) {
+			return { leagues: [], error: demoJoin.error };
+		}
 		return { leagues: [], error: error.message };
 	}
 
 	const leagues = (data ?? [])
 		.map((row) => mapMembership(row, userId))
-		.filter((league): league is LeagueWithRole => league !== null);
+		.filter((league): league is LeagueWithRole => league !== null)
+		.map((league) => ({
+			...league,
+			is_public_demo: Boolean(league.is_public_demo)
+		}))
+		.sort((a, b) => {
+			// Keep public demos easy to find at the top.
+			if (a.is_public_demo !== b.is_public_demo) {
+				return a.is_public_demo ? -1 : 1;
+			}
+			return new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime();
+		});
 
 	return { leagues, error: null };
 }
@@ -145,7 +193,7 @@ export async function createLeague(
 		return { league: null, error: mapInviteError(error.message) };
 	}
 
-	return { league: data as League, error: null };
+	return { league: { ...(data as League), is_public_demo: Boolean((data as League).is_public_demo) }, error: null };
 }
 
 export async function updateLeagueInviteCode(
@@ -233,11 +281,41 @@ export async function adminKickLeagueMember(
 	return { error: null };
 }
 
+export async function adminDeleteLeague(
+	leagueId: string
+): Promise<{ error: string | null }> {
+	const supabase = getSupabase();
+
+	const { error } = await supabase.rpc('admin_delete_league', {
+		p_league_id: leagueId
+	});
+
+	if (error) {
+		const missingRpc =
+			error.code === 'PGRST202' ||
+			error.message.includes('admin_delete_league') ||
+			error.message.includes('Could not find the function');
+
+		if (missingRpc) {
+			return {
+				error:
+					'Delete league is not set up on the database yet. Run migration 025 in Supabase SQL Editor, or locally: npm run db:apply-admin-delete-league (requires SUPABASE_DB_URL in .env).'
+			};
+		}
+		return { error: error.message };
+	}
+
+	return { error: null };
+}
+
 export async function fetchLeague(
 	leagueId: string,
 	userId: string
 ): Promise<{ league: LeagueWithRole | null; error: string | null }> {
 	const supabase = getSupabase();
+
+	// Public demos are joinable without an invite; ensure membership before select.
+	await ensurePublicDemoMemberships();
 
 	const { data, error } = await supabase
 		.from('leagues')
@@ -259,6 +337,7 @@ export async function fetchLeague(
 	return {
 		league: {
 			...data,
+			is_public_demo: Boolean(data.is_public_demo),
 			is_commissioner: data.commissioner_id === userId,
 			joined_at: membership?.joined_at ?? data.created_at
 		},

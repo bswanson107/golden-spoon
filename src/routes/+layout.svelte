@@ -14,7 +14,7 @@
 	import QaBanner from '$lib/components/QaBanner.svelte';
 	import { hydrateQaClock } from '$lib/qaClock.svelte';
 	import { getTheme, initTheme, setTheme } from '$lib/themeStore.svelte';
-	import { fetchMyLeagues } from '$lib/leagues';
+	import { fetchMyLeagues, PUBLIC_DEMO_LEAGUE_ID } from '$lib/leagues';
 	import {
 		getSeasonIndicatorLabel,
 		getSeasonIndicatorTooltip,
@@ -74,7 +74,13 @@
 		return null;
 	});
 
-	const navLeagueId = $derived(routeLeagueId ?? primaryLeagueId);
+	const navLeagueId = $derived.by(() => {
+		// Prefer a real (non-demo) league for header League / My Picks links.
+		if (routeLeagueId && routeLeagueId !== PUBLIC_DEMO_LEAGUE_ID) {
+			return routeLeagueId;
+		}
+		return primaryLeagueId ?? routeLeagueId;
+	});
 
 	const standingsHref = $derived(
 		navLeagueId ? `${base}/league/${navLeagueId}` : `${base}/leagues`
@@ -128,7 +134,8 @@
 		}
 
 		fetchMyLeagues(user.id).then((result) => {
-			primaryLeagueId = result.leagues[0]?.id ?? null;
+			const nonDemo = result.leagues.find((league) => !league.is_public_demo);
+			primaryLeagueId = nonDemo?.id ?? result.leagues[0]?.id ?? null;
 		});
 	});
 

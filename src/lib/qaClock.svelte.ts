@@ -115,14 +115,11 @@ export async function hydrateQaClock(): Promise<void> {
  * Run time-dependent processing (kickoff win-% lock + auto-MNF / missed
  * assignment + scoring) for the simulated clock across all active seasons.
  * Mirrors what the production cron does, so every closed week always has a
- * value for every member. Best-effort: failures here never block the clock.
+ * value for every member. Also invoked server-side from qa_set_clock.
  */
-async function runProcessing(): Promise<void> {
-	try {
-		await getSupabase().rpc('qa_run_processing', { p_season_year: null });
-	} catch {
-		/* admin-only / offline — ignore so the clock still updates */
-	}
+async function runProcessing(): Promise<string | null> {
+	const { error } = await getSupabase().rpc('qa_run_processing', { p_season_year: null });
+	return error?.message ?? null;
 }
 
 /** Push a new simulated time to the DB and update the local store. */
@@ -132,8 +129,12 @@ export async function setQaClock(simulatedNow: Date): Promise<{ error: string | 
 	});
 	if (error) return { error: error.message };
 	ingestRow((Array.isArray(data) ? data[0] : data) as QaClockRow);
-	// Advancing time closes weeks → assign auto-MNF / missed picks for them.
-	await runProcessing();
+	// Client-side re-run covers DBs that have not yet applied the in-clock
+	// processing hook; surface failures so QA Mode is not silently wrong.
+	const processingError = await runProcessing();
+	if (processingError) {
+		return { error: `Clock set, but week processing failed: ${processingError}` };
+	}
 	return { error: null };
 }
 

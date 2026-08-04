@@ -7,6 +7,7 @@ export type League = {
 	commissioner_id: string;
 	invite_code: string;
 	is_active: boolean;
+	is_public_demo: boolean;
 	created_at: string;
 	underdog_threshold_pct: number;
 	tiebreaker_mode: TiebreakerMode;

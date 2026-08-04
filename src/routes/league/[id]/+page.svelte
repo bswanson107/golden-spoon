@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { afterNavigate } from '$app/navigation';
+	import { afterNavigate, goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { base } from '$app/paths';
 	import { useAdmin, useAuth } from '$lib/auth';
@@ -26,7 +26,12 @@
 		getNextUpcomingKickoff,
 		getPickCtaState
 	} from '$lib/leaguePickStatus';
-	import { adminKickLeagueMember, fetchLeague, updateLeagueInviteCode } from '$lib/leagues';
+	import {
+		adminDeleteLeague,
+		adminKickLeagueMember,
+		fetchLeague,
+		updateLeagueInviteCode
+	} from '$lib/leagues';
 	import {
 		normalizeUnderdogThreshold,
 		parsePickVisibility,
@@ -68,15 +73,18 @@
 	let inviteError = $state<string | null>(null);
 	let kickingUserId = $state<string | null>(null);
 	let kickError = $state<string | null>(null);
+	let deletingLeague = $state(false);
+	let deleteLeagueError = $state<string | null>(null);
 	let rulesOpen = $state(false);
 
 	const leagueId = $derived($page.params.id);
 
-	const adminKickEnabled = $derived(
+	const adminToolsEnabled = $derived(
 		isAppAdmin(auth.user?.email) && admin.adminModeEnabled
 	);
 
 	const isDemo = $derived(league !== null && isDemoSeason(league.season_year));
+	const isPublicDemo = $derived(league?.is_public_demo === true);
 
 	const playerDisplayName = $derived.by(() => {
 		const user = auth.user;
@@ -102,18 +110,34 @@
 			return { picks, standings, maxVisibleWeek: null, demoActive: false };
 		}
 
+		// Public demo: browse historical pool only — never surface the current viewer.
+		const sourcePicks = isPublicDemo ? picks.filter((pick) => pick.user_id !== user.id) : picks;
+		const sourceStandings = isPublicDemo
+			? standings.filter((row) => row.user_id !== user.id)
+			: standings;
+
 		return {
 			...mergeDemoLeagueView(
-				picks,
-				standings,
+				sourcePicks,
+				sourceStandings,
 				demoState,
 				demoGamesByWeek,
 				user.id,
 				playerDisplayName,
-				league?.tiebreaker_mode ?? 'fewest_wins'
+				league?.tiebreaker_mode ?? 'fewest_wins',
+				!isPublicDemo
 			),
 			demoActive: true
 		};
+	});
+
+	const visiblePickSubmissions = $derived.by(() => {
+		const user = auth.user;
+		if (!isPublicDemo || !user) return pickSubmissions;
+		const prefix = `${user.id.toLowerCase()}:`;
+		return Object.fromEntries(
+			Object.entries(pickSubmissions).filter(([key]) => !key.startsWith(prefix))
+		);
 	});
 
 	const userCurrentWeekPick = $derived.by(() => {
@@ -131,7 +155,7 @@
 
 	const demoDashboardPick = $derived.by((): LeaguePick | null => {
 		const user = auth.user;
-		if (!isDemo || !user) return null;
+		if (!isDemo || isPublicDemo || !user) return null;
 
 		const demoPick = demoState.picks[demoState.simulatedWeek];
 		if (!demoPick) return null;
@@ -159,7 +183,7 @@
 	});
 
 	const demoPickCta = $derived.by(() => {
-		if (!isDemo) return { kind: 'hidden' as const };
+		if (!isDemo || isPublicDemo) return { kind: 'hidden' as const };
 
 		const week = demoState.simulatedWeek;
 		const games = demoGamesByWeek.get(week) ?? [];
@@ -270,7 +294,7 @@
 
 	async function handleKickPlayer(userId: string, displayName: string) {
 		const id = leagueId;
-		if (!id || !adminKickEnabled) return;
+		if (!id || !adminToolsEnabled) return;
 
 		const confirmed = confirm(`Remove ${displayName} from this league?`);
 		if (!confirmed) return;
@@ -293,6 +317,29 @@
 		);
 
 		await reloadLeagueData();
+	}
+
+	async function handleDeleteLeague() {
+		const id = leagueId;
+		if (!id || !league || !adminToolsEnabled || deletingLeague) return;
+
+		const confirmed = confirm(
+			`Delete league "${league.name}" permanently? This removes all members and picks and cannot be undone.`
+		);
+		if (!confirmed) return;
+
+		deleteLeagueError = null;
+		deletingLeague = true;
+
+		const result = await adminDeleteLeague(id);
+		deletingLeague = false;
+
+		if (result.error) {
+			deleteLeagueError = result.error;
+			return;
+		}
+
+		await goto(`${base}/leagues`);
 	}
 
 	$effect(() => {
@@ -377,6 +424,24 @@
 		fetchSeasonWeekCompletion(leagueData.season_year).then((result) => {
 			if (cancelled) return;
 			gridMaxWeek = result.error ? 1 : maxVisibleWeek(result.weeks);
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
+
+	// After QA clock advances, auto-MNF / missed rows may have been inserted —
+	// refetch so the grid is not stuck on stale empty cells.
+	$effect(() => {
+		const clockMs = qaSimulatedNowMs();
+		const enabled = isQaClockEnabled();
+		const id = leagueId;
+		if (!enabled || clockMs === null || !id || !league || isDemoSeason(league.season_year)) {
+			return;
+		}
+		let cancelled = false;
+		void reloadLeagueData().then(() => {
+			if (!cancelled) gridRefreshToken += 1;
 		});
 		return () => {
 			cancelled = true;
@@ -480,13 +545,30 @@
 		<p class="auth-error" role="alert">{error ?? 'League not found.'}</p>
 	{:else}
 		{#if isDemo}
-			<DemoBanner />
+			<DemoBanner seasonYear={league.season_year} />
 		{/if}
 
-		<h1 class="page-title">{league.name}</h1>
+		<div class="league-title-row">
+			<h1 class="page-title">{league.name}</h1>
+			{#if adminToolsEnabled}
+				<button
+					type="button"
+					class="delete-league-btn"
+					title="Delete league"
+					disabled={deletingLeague}
+					aria-label="Delete league {league.name}"
+					onclick={handleDeleteLeague}
+				>
+					{deletingLeague ? '…' : '×'}
+				</button>
+			{/if}
+		</div>
 		<p class="page-subtitle">{league.season_year} season</p>
+		{#if deleteLeagueError}
+			<p class="auth-error" role="alert">{deleteLeagueError}</p>
+		{/if}
 
-		{#if isDemo || dashboardCta.kind !== 'hidden'}
+		{#if !isPublicDemo && (isDemo || dashboardCta.kind !== 'hidden')}
 			<PickDashboard
 				leagueId={league.id}
 				week={dashboardWeek}
@@ -502,10 +584,15 @@
 					viewWeek={demoState.simulatedWeek}
 					onWeekChange={handleDemoWeekChange}
 					label="Simulated time"
-					showReset
-					canReset={hasDemoPicks(demoState)}
-					onReset={handleResetDemo}
+					showReset={!isPublicDemo}
+					canReset={!isPublicDemo && hasDemoPicks(demoState)}
+					onReset={isPublicDemo ? undefined : handleResetDemo}
 				/>
+				{#if isPublicDemo}
+					<a href="{base}/league/{league.id}/pick" class="btn btn-primary demo-picks-link">
+						View Pick Selections
+					</a>
+				{/if}
 			</section>
 		{/if}
 
@@ -609,9 +696,9 @@
 			{:else}
 				<StandingsTable
 					standings={leagueView.standings}
-					currentUserId={auth.user?.id ?? null}
+					currentUserId={isPublicDemo ? null : (auth.user?.id ?? null)}
 					tiebreakerMode={rulesTiebreakerMode}
-					adminKickEnabled={adminKickEnabled}
+					adminKickEnabled={adminToolsEnabled}
 					commissionerId={league.commissioner_id}
 					{kickingUserId}
 					onKickPlayer={handleKickPlayer}
@@ -643,17 +730,17 @@
 		</section>
 
 		<section class="card">
-			{#if leagueView.picks.length === 0 && Object.keys(pickSubmissions).length === 0}
+			{#if leagueView.picks.length === 0 && Object.keys(visiblePickSubmissions).length === 0}
 				<h2 class="card-title">Weekly picks</h2>
 				<p class="muted">No picks yet.</p>
 			{:else}
 				<PicksGrid
 					picks={leagueView.picks}
 					standings={leagueView.standings}
-					currentUserId={auth.user?.id ?? null}
+					currentUserId={isPublicDemo ? null : (auth.user?.id ?? null)}
 					viewWeek={null}
 					maxWeek={isDemo ? null : gridMaxWeek}
-					{pickSubmissions}
+					pickSubmissions={visiblePickSubmissions}
 					pickVisibility={rulesPickVisibility}
 				>
 					{#snippet stickyTop()}
@@ -685,6 +772,45 @@
 <style>
 	.page-league {
 		max-width: var(--app-content-max, 50rem);
+	}
+
+	.league-title-row {
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
+		min-width: 0;
+	}
+
+	.league-title-row .page-title {
+		min-width: 0;
+	}
+
+	.delete-league-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.35rem;
+		height: 1.35rem;
+		padding: 0;
+		border: none;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+		color: var(--danger);
+		font-size: 1rem;
+		line-height: 1;
+		font-weight: 700;
+		cursor: pointer;
+		box-shadow: var(--shadow-sm);
+		flex-shrink: 0;
+	}
+
+	.delete-league-btn:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--danger) 20%, var(--surface));
+	}
+
+	.delete-league-btn:disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
 	}
 
 	.muted {
@@ -793,5 +919,15 @@
 
 	.demo-travel-wrap {
 		margin-top: 1.25rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.demo-picks-link {
+		display: flex;
+		width: 100%;
+		justify-content: center;
+		box-sizing: border-box;
 	}
 </style>

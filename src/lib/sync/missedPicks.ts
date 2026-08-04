@@ -70,13 +70,15 @@ export async function markMissedPicks(
 
 	const { data: leagues, error: leaguesError } = await adminClient
 		.from('leagues')
-		.select('id, season_year')
+		.select('id, season_year, is_public_demo')
 		.eq('season_year', seasonYear)
 		.eq('is_active', true);
 
 	if (leaguesError) throw new Error(`markMissedPicks leagues query failed: ${leaguesError.message}`);
 
-	const leagueIds = ((leagues ?? []) as LeagueRow[]).map((l) => l.id);
+	const leagueIds = ((leagues ?? []) as (LeagueRow & { is_public_demo?: boolean })[])
+		.filter((l) => !l.is_public_demo)
+		.map((l) => l.id);
 	if (leagueIds.length === 0) return 0;
 
 	const { data: members, error: membersError } = await adminClient

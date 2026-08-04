@@ -243,7 +243,7 @@
 
 	.pick-primary-badges {
 		display: flex;
-		align-items: stretch;
+		align-items: center;
 		gap: 0.4rem;
 		width: 100%;
 		min-width: 0;
@@ -320,18 +320,8 @@
 	}
 
 	.change-link {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
 		flex-shrink: 0;
-		align-self: stretch;
 		margin-left: auto;
-		padding: 0.22rem 0.45rem;
-		font-size: 0.72rem;
-		font-weight: 700;
-		letter-spacing: 0.04em;
-		line-height: 1.25;
-		box-sizing: border-box;
 	}
 
 	.pick-details {

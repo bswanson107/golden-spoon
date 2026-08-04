@@ -22,10 +22,10 @@ export function demoStorageKey(leagueId: string, userId: string): string {
 export const MIN_SIMULATED_WEEK = 1;
 export const MAX_SIMULATED_WEEK = 18;
 
-export function createEmptyDemoState(): DemoState {
+export function createEmptyDemoState(simulatedWeek: number = MIN_SIMULATED_WEEK): DemoState {
 	return {
 		enabled: false,
-		simulatedWeek: MIN_SIMULATED_WEEK,
+		simulatedWeek: clampSimulatedWeek(simulatedWeek),
 		picks: {}
 	};
 }
@@ -33,17 +33,20 @@ export function createEmptyDemoState(): DemoState {
 export function loadDemoState(leagueId: string, userId: string, seasonYear?: number): DemoState {
 	if (!browser) return createEmptyDemoState();
 
+	const demoDefaultWeek =
+		seasonYear !== undefined && isDemoSeason(seasonYear) ? MAX_SIMULATED_WEEK : MIN_SIMULATED_WEEK;
+
 	try {
 		const raw = localStorage.getItem(demoStorageKey(leagueId, userId));
 		if (!raw) {
 			return seasonYear !== undefined && isDemoSeason(seasonYear)
-				? { ...createEmptyDemoState(), enabled: true }
+				? { ...createEmptyDemoState(demoDefaultWeek), enabled: true }
 				: createEmptyDemoState();
 		}
 		const parsed = JSON.parse(raw) as DemoState;
 		const state: DemoState = {
 			enabled: Boolean(parsed.enabled),
-			simulatedWeek: clampSimulatedWeek(Number(parsed.simulatedWeek) || MIN_SIMULATED_WEEK),
+			simulatedWeek: clampSimulatedWeek(Number(parsed.simulatedWeek) || demoDefaultWeek),
 			picks: parsed.picks ?? {}
 		};
 		if (seasonYear !== undefined && isDemoSeason(seasonYear)) {
@@ -54,7 +57,7 @@ export function loadDemoState(leagueId: string, userId: string, seasonYear?: num
 		return state;
 	} catch {
 		return seasonYear !== undefined && isDemoSeason(seasonYear)
-			? { ...createEmptyDemoState(), enabled: true }
+			? { ...createEmptyDemoState(demoDefaultWeek), enabled: true }
 			: createEmptyDemoState();
 	}
 }
@@ -272,7 +275,8 @@ function buildStandingsFromPicks(
 	baseStandings: StandingRow[],
 	userId: string,
 	displayName: string,
-	tiebreakerMode: TiebreakerMode = DEFAULT_TIEBREAKER_MODE
+	tiebreakerMode: TiebreakerMode = DEFAULT_TIEBREAKER_MODE,
+	includeViewer = true
 ): StandingRow[] {
 	const picksByUser = new Map<string, LeaguePick[]>();
 	for (const pick of picks) {
@@ -282,11 +286,14 @@ function buildStandingsFromPicks(
 	}
 
 	const namesByUser = new Map(baseStandings.map((row) => [row.user_id, row.display_name]));
-	if (!namesByUser.has(userId)) {
+	if (includeViewer && !namesByUser.has(userId)) {
 		namesByUser.set(userId, displayName);
 	}
 
 	const userIds = new Set([...namesByUser.keys(), ...picksByUser.keys()]);
+	if (!includeViewer) {
+		userIds.delete(userId);
+	}
 
 	const rows: StandingRow[] = [...userIds].map((uid) => {
 		const userPicks = picksByUser.get(uid) ?? [];
@@ -339,7 +346,8 @@ export function mergeDemoLeagueView(
 	gamesByWeek: Map<number, WeekGame[]>,
 	userId: string,
 	displayName: string,
-	tiebreakerMode: TiebreakerMode | string = DEFAULT_TIEBREAKER_MODE
+	tiebreakerMode: TiebreakerMode | string = DEFAULT_TIEBREAKER_MODE,
+	includeViewer = true
 ): { picks: LeaguePick[]; standings: StandingRow[]; maxVisibleWeek: number } {
 	const resolvedTiebreaker = parseTiebreakerMode(tiebreakerMode);
 	if (!demoState.enabled) {
@@ -349,22 +357,25 @@ export function mergeDemoLeagueView(
 	const maxVisibleWeek = getMaxVisibleWeek(demoState.simulatedWeek);
 
 	const mergedPicks = dbPicks.filter(
-		(pick) => pick.week_number <= maxVisibleWeek && pick.user_id !== userId
+		(pick) =>
+			pick.week_number <= maxVisibleWeek && (includeViewer || pick.user_id !== userId)
 	);
 
-	for (const [weekKey, demoPick] of Object.entries(demoState.picks)) {
-		const week = Number(weekKey);
-		if (week > maxVisibleWeek) continue;
+	if (includeViewer) {
+		for (const [weekKey, demoPick] of Object.entries(demoState.picks)) {
+			const week = Number(weekKey);
+			if (week > maxVisibleWeek) continue;
 
-		const games = gamesByWeek.get(week) ?? [];
-		const game = games.find((g) => g.id === demoPick.game_id) ?? null;
+			const games = gamesByWeek.get(week) ?? [];
+			const game = games.find((g) => g.id === demoPick.game_id) ?? null;
 
-		if (!resultsVisibleForWeek(week, demoState.simulatedWeek)) {
-			continue;
+			if (!resultsVisibleForWeek(week, demoState.simulatedWeek)) {
+				continue;
+			}
+
+			const scored = scoreDemoPick(week, demoPick, game, demoState.simulatedWeek);
+			mergedPicks.push(demoPickToLeaguePick(week, demoPick, scored, userId, displayName, game));
 		}
-
-		const scored = scoreDemoPick(week, demoPick, game, demoState.simulatedWeek);
-		mergedPicks.push(demoPickToLeaguePick(week, demoPick, scored, userId, displayName, game));
 	}
 
 	const standings = buildStandingsFromPicks(
@@ -372,7 +383,8 @@ export function mergeDemoLeagueView(
 		dbStandings,
 		userId,
 		displayName,
-		resolvedTiebreaker
+		resolvedTiebreaker,
+		includeViewer
 	);
 
 	return { picks: mergedPicks, standings, maxVisibleWeek };

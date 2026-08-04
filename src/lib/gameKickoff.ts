@@ -165,7 +165,6 @@ export function classifySpecialEvents(kickoffAt: string): GameSpecialEvent[] {
 	if (isBlackFriday(parts)) events.push('black-friday');
 	if (parts.month === 12 && parts.day === 24) events.push('christmas-eve');
 	if (parts.month === 12 && parts.day === 25) events.push('christmas');
-	if (parts.dayOfWeek === 6) events.push('saturday');
 
 	return events;
 }

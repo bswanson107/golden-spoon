@@ -44,10 +44,12 @@
 
 	const leagueId = $derived($page.params.id);
 	const isDemo = $derived(league !== null && isDemoSeason(league.season_year));
+	const isPublicDemo = $derived(league?.is_public_demo === true);
 	const userPicksByWeek = $derived(picksByWeek(userPicks));
 	const underdogThreshold = $derived(normalizeUnderdogThreshold(league?.underdog_threshold_pct));
 
 	const seasonPickedTeamIds = $derived.by(() => {
+		if (isPublicDemo) return [];
 		if (isDemo) {
 			return Object.values(demoState.picks).map((pick) => pick.team_id.toUpperCase());
 		}
@@ -56,6 +58,7 @@
 
 	const seasonPickedWeekByTeam = $derived.by(() => {
 		const map: Record<string, number> = {};
+		if (isPublicDemo) return map;
 		if (isDemo) {
 			for (const [week, pick] of Object.entries(demoState.picks)) {
 				map[pick.team_id.toUpperCase()] = Number(week);
@@ -71,6 +74,7 @@
 
 	const seasonTeamByWeek = $derived.by(() => {
 		const map: Record<number, string> = {};
+		if (isPublicDemo) return map;
 		if (isDemo) {
 			for (const [week, pick] of Object.entries(demoState.picks)) {
 				map[Number(week)] = pick.team_id.toUpperCase();
@@ -173,6 +177,7 @@
 	}
 
 	function handleSaveDemoPick(week: number, pick: DemoPick, options?: { clearWeek?: number }) {
+		if (isPublicDemo) return;
 		const nextPicks = { ...demoState.picks, [week]: pick };
 		if (options?.clearWeek !== undefined) {
 			delete nextPicks[options.clearWeek];
@@ -226,10 +231,10 @@
 		<p class="auth-error" role="alert">{error ?? 'League not found.'}</p>
 	{:else}
 		{#if isDemo}
-			<DemoBanner />
+			<DemoBanner seasonYear={league.season_year} />
 		{/if}
 
-		<h1 class="page-title">Make your pick</h1>
+		<h1 class="page-title">{isPublicDemo ? 'Week matchups' : 'Make your pick'}</h1>
 		<div class="pick-view-row">
 			<span class="pick-view-label">Pick Selection View:</span>
 			<div class="view-toggle" role="group" aria-label="Game display">
@@ -264,26 +269,29 @@
 				viewWeek={isDemo ? demoState.simulatedWeek : viewWeek}
 				onWeekChange={handleWeekChange}
 				weekNavLabel={isDemo ? 'Simulated time' : 'View week'}
-				showWeekReset={isDemo}
-				canWeekReset={hasDemoPicks(demoState)}
-				onWeekReset={isDemo ? handleResetDemo : undefined}
+				showWeekReset={isDemo && !isPublicDemo}
+				canWeekReset={!isPublicDemo && hasDemoPicks(demoState)}
+				onWeekReset={isPublicDemo ? undefined : isDemo ? handleResetDemo : undefined}
 				demoState={isDemo ? demoState : null}
 				{userPicksByWeek}
 				{underdogThreshold}
 				{saving}
 				{viewMode}
+				readOnly={isPublicDemo}
 				onSavePick={isDemo ? handleSaveDemoPick : handleSaveLivePick}
-				onOpenSeasonOutlook={() => (seasonPicksOpen = true)}
+				onOpenSeasonOutlook={isPublicDemo ? undefined : () => (seasonPicksOpen = true)}
 			/>
 		</section>
 
-		<SeasonLongPicksModal
-			open={seasonPicksOpen}
-			pickedTeamIds={seasonPickedTeamIds}
-			pickedWeekByTeam={seasonPickedWeekByTeam}
-			teamByWeek={seasonTeamByWeek}
-			onClose={() => (seasonPicksOpen = false)}
-		/>
+		{#if !isPublicDemo}
+			<SeasonLongPicksModal
+				open={seasonPicksOpen}
+				pickedTeamIds={seasonPickedTeamIds}
+				pickedWeekByTeam={seasonPickedWeekByTeam}
+				teamByWeek={seasonTeamByWeek}
+				onClose={() => (seasonPicksOpen = false)}
+			/>
+		{/if}
 	{/if}
 </main>
 
