@@ -85,6 +85,8 @@
 				<tr
 					class:leader={showLeaderCrowns && row.standing_rank === 1}
 					class:me={currentUserId !== null && row.user_id === currentUserId}
+					data-testid="standings-row"
+					data-user={row.user_id.toLowerCase()}
 				>
 					<td class="num rank">{row.standing_rank}</td>
 					<td class="name">
@@ -109,7 +111,7 @@
 							{/if}
 						</span>
 					</td>
-					<td class="num points">{row.total_points.toFixed(1)}</td>
+					<td class="num points" data-testid="standings-points">{row.total_points.toFixed(1)}</td>
 					<td class="num">{formatRecord(row)}</td>
 					<td class="num tb">{row.tiebreaker_picked_team_wins}</td>
 				</tr>

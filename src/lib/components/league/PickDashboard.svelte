@@ -81,7 +81,9 @@
 				<div class="pick-badges">
 					<div class="pick-primary-badges">
 						<span class="badge badge-pick">Your pick</span>
-						<a href={pickUrl} class="btn btn-ghost btn-sm change-link">Change pick</a>
+						{#if pickCta.changeable}
+							<a href={pickUrl} class="btn btn-ghost btn-sm change-link">Change pick</a>
+						{/if}
 					</div>
 					{#if userPick.is_underdog_at_pick}
 						<span class="badge badge-underdawg">Underdawg · 2 pts</span>

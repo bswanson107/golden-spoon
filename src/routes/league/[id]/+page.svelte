@@ -150,6 +150,9 @@
 
 	const pickCta = $derived.by(() => {
 		if (isDemo || !league) return { kind: 'hidden' as const };
+		// Recompute when the QA clock moves (same pattern as the picks grid).
+		void qaSimulatedNowMs();
+		void isQaClockEnabled();
 		return getPickCtaState(viewWeek, liveWeekGames, userCurrentWeekPick);
 	});
 

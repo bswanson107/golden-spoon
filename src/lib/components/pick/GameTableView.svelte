@@ -3,6 +3,7 @@
 	import GameKickoffInfo from '$lib/components/pick/GameKickoffInfo.svelte';
 	import { getTeamName } from '$lib/data/nflTeams';
 	import { isUnderdog, formatWinPct } from '$lib/demo';
+	import { qaNow } from '$lib/qaClock.svelte';
 	import type { WeekGame } from '$lib/types/game';
 
 	let {
@@ -10,6 +11,7 @@
 		selectedTeamId = null,
 		isSubmittedPickGameId = null,
 		teamUsageByWeek = new Map<string, number>(),
+		lockedTeamIds = new Set<string>(),
 		activeWeek = 1,
 		pickingEnabled = true,
 		underdogThreshold = 33,
@@ -19,18 +21,32 @@
 		selectedTeamId?: string | null;
 		isSubmittedPickGameId?: string | null;
 		teamUsageByWeek?: Map<string, number>;
+		lockedTeamIds?: Set<string>;
 		activeWeek?: number;
 		pickingEnabled?: boolean;
 		underdogThreshold?: number;
 		onSelectTeam?: (game: WeekGame, teamId: string) => void;
 	} = $props();
 
-	function teamState(teamId: string): 'selected' | 'selectable' | 'locked' | 'used-elsewhere' {
-		if (selectedTeamId === teamId) return pickingEnabled ? 'selectable' : 'selected';
-		if (!pickingEnabled) return 'locked';
+	type TeamState = 'selected' | 'selectable' | 'locked' | 'used-elsewhere' | 'used-locked';
+
+	function teamState(teamId: string, kickoffAt: string): TeamState {
+		const kickedOff = new Date(kickoffAt).getTime() <= qaNow();
+		if (selectedTeamId === teamId) {
+			return pickingEnabled && !kickedOff ? 'selectable' : 'selected';
+		}
+		if (!pickingEnabled || kickedOff) return 'locked';
 		const usedWeek = teamUsageByWeek.get(teamId);
-		if (usedWeek !== undefined && usedWeek !== activeWeek) return 'used-elsewhere';
+		if (usedWeek !== undefined && usedWeek !== activeWeek) {
+			if (lockedTeamIds.has(teamId)) return 'used-locked';
+			return 'used-elsewhere';
+		}
 		return 'selectable';
+	}
+
+	function isDisabled(state: TeamState): boolean {
+		// `selected` = current pick but no longer changeable (kickoff passed / week closed)
+		return state === 'locked' || state === 'used-locked' || state === 'selected';
 	}
 
 	function displayName(teamId: string, fallbackName: string): string {
@@ -45,6 +61,7 @@
 	function teamTitle(teamId: string): string | undefined {
 		const usedWeek = teamUsageByWeek.get(teamId);
 		if (usedWeek === undefined || usedWeek === activeWeek) return undefined;
+		if (lockedTeamIds.has(teamId)) return `Locked — picked Week ${usedWeek}`;
 		return `Already selected — Week ${usedWeek}`;
 	}
 </script>
@@ -70,7 +87,7 @@
 					</tr>
 				{/if}
 				{#each teams as { team, side, winPct }, ti}
-					{@const state = teamState(team.id)}
+					{@const state = teamState(team.id, game.kickoff_at)}
 					{@const isSelected = selectedTeamId === team.id}
 					{@const isUD = winPct !== null && isUnderdog(winPct, underdogThreshold)}
 					{@const usedWk = usedWeekFor(team.id)}
@@ -81,13 +98,13 @@
 						class:is-selected={isSelected}
 						class:is-submitted={isSubmitted && isSelected}
 						title={teamTitle(team.id)}
-						onclick={() => state !== 'locked' && onSelectTeam?.(game, team.id)}
+						onclick={() => !isDisabled(state) && onSelectTeam?.(game, team.id)}
 						role="button"
-						tabindex={state === 'locked' ? -1 : 0}
+						tabindex={isDisabled(state) ? -1 : 0}
 						aria-pressed={isSelected}
-						aria-disabled={state === 'locked'}
+						aria-disabled={isDisabled(state)}
 						onkeydown={(e) => {
-							if ((e.key === 'Enter' || e.key === ' ') && state !== 'locked') {
+							if ((e.key === 'Enter' || e.key === ' ') && !isDisabled(state)) {
 								e.preventDefault();
 								onSelectTeam?.(game, team.id);
 							}
@@ -204,7 +221,8 @@
 		background: color-mix(in srgb, var(--text) 12%, var(--surface));
 	}
 
-	.team-row.locked .pick-block {
+	.team-row.locked .pick-block,
+	.team-row.used-locked .pick-block {
 		opacity: 0.45;
 		cursor: not-allowed;
 	}

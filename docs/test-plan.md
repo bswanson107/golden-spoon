@@ -4,12 +4,25 @@ A checklist of scenarios to run **before any real league is created**, using the
 QA Mode harness at `/qa` (admin only). QA Mode lets you freeze "now" to any
 minute and simulate game outcomes / win % without the live nflverse feed.
 
+## Automated E2E
+
+A lean Playwright suite lives in [`e2e/`](../e2e/) and covers the highest-value
+items below with simulated time. See [`e2e/README.md`](../e2e/README.md).
+
+| Automated | Manual checklist IDs |
+|-----------|----------------------|
+| Deadlines | 1.1, 1.2, 1.3, 1.4, 1.9 |
+| Visibility | 2.1, 2.2 (after reload), 2.3, 2.4 |
+| Auto-MNF / missed | 3.1, 3.3, 3.4, 3.6, 3.7 |
+| Scoring | 4.1, 4.2, 4.3, 5.3 |
+| Rules / clock | 6.1, 6.3, 7.3 (both reuse cases) |
+
+Everything else in this document stays manual exploratory QA.
+
 > Testing happens against the live Supabase project. This is intentional while
-> there are no real leagues. **Pause the GitHub Actions "Sync NFL Data"
-> workflow** (`.github/workflows/sync-nfl.yml`) during testing so nflverse does
-> not overwrite the games you simulate.
->
-> **How to pause it (do this before you start):**
+> there are no real leagues. The Playwright suite **disables the "Sync NFL Data"
+> workflow** in global setup and re-enables it in teardown (requires `gh` auth).
+> For manual QA Mode runs, pause it yourself:
 >
 > - GitHub UI: repo → **Actions** tab → **Sync NFL Data** → **⋯** menu →
 >   **Disable workflow**. (Re-enable the same way when you're done.)
@@ -103,8 +116,9 @@ indicator. This runs in **Run week processing** (and the live cron sync).
 
 - [ ] **3.1 Auto-assign MNF home team** — In League A, leave User2 with no pick.
   Set clock to MNF kickoff + 1 min and click **Run week processing**. *Expected:*
-  User2's week cell shows the **MNF home team** with an **"A" (auto) badge**, not
-  a missed ×. Once that game is final, the pick scores like a normal pick
+  User2's week cell shows the **MNF home team** as a normal visible pick with
+  `is_auto_pick` (E2E asserts `data-auto="true"`; there is no separate "A" badge
+  in the grid today). Once that game is final, the pick scores like a normal pick
   (win/loss/tie per the MNF result and underdog rules).
 - [ ] **3.2 Auto pick scores after the fact** — If you run processing *before*
   simulating the MNF game, the auto pick shows as pending; after you simulate the
@@ -179,8 +193,14 @@ indicator. This runs in **Run week processing** (and the live cron sync).
   threshold / tiebreaker / visibility. *Expected:* allowed.
 - [ ] **7.2 Rules locked after first pick** — Submit one pick, then try to edit
   rules. *Expected:* rejected ("Rules are locked after the first pick").
-- [ ] **7.3 No team reuse** — Pick Team X in Week 1; in Week 2 try to pick Team X
-  again. *Expected:* rejected (unique constraint).
+- [ ] **7.3 Team reuse — unplayed week (move)** — While simulated time is still in
+  Week 1, pick Team X in Week 2, then open Week 3 and tap Team X again.
+  *Expected:* `Change team selection?` opens; Cancel leaves Week 2 intact;
+  Continue moves the pick to Week 3 (Week 2 empty). Team X is used once.
+- [ ] **7.3b Team reuse — locked week (refused)** — Pick Team X in Week 1, advance
+  the clock past that game's kickoff, then open Week 2 and try Team X.
+  *Expected:* the button is disabled (`Locked — picked Week 1`); the dialog does
+  **not** open; Week 2 stays empty.
 
 ## 8. Weekly picks grid (column reveal)
 
@@ -228,7 +248,11 @@ indicator. This runs in **Run week processing** (and the live cron sync).
 - Simulating a game `final` alone does not lock `is_underdog_at_pick`; advancing
   the clock past kickoff (or running processing) does.
 - Missed weeks no longer mean an automatic 0: a member with no pick is assigned
-  the week's MNF home team as a real scoring pick (badge "A"), unless they've
-  already used that team this season — then it's a 0-point missed (×).
+  the week's MNF home team as a real scoring pick (`is_auto_pick`; grid has no
+  separate "A" badge today), unless they've already used that team this season —
+  then it's a 0-point missed (×).
+- Team reuse: if the earlier week's game has not kicked off, re-selecting that
+  team in a later week opens a move confirmation. If the earlier game has
+  kicked off, the team is disabled and cannot be moved.
 - `Reset week` / `Reset season` also delete auto-assigned and missed rows for the
   scope so a week can be replayed cleanly.

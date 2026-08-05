@@ -14,7 +14,7 @@
 		scoreDemoPick
 	} from '$lib/demo';
 	import { teamUsageByWeek, type UserLeaguePick } from '$lib/picks';
-	import { qaNowDate } from '$lib/qaClock.svelte';
+	import { qaNow, qaNowDate } from '$lib/qaClock.svelte';
 	import { fetchWeekGames } from '$lib/games';
 	import { formatSyncTimeAgo, getLastSyncTime, requestGameSync } from '$lib/syncGames';
 	import type { DemoPick, DemoState } from '$lib/types/demo';
@@ -120,6 +120,20 @@
 			return teamUsageByWeek(picksMap, viewWeek);
 		}
 		return teamUsageByWeek(userPicksByWeek, viewWeek);
+	});
+
+	/** Teams whose earlier-week pick has already kicked off — cannot be moved. */
+	const lockedTeamIds = $derived.by(() => {
+		const locked = new Set<string>();
+		if (mode !== 'live') return locked;
+		const now = qaNow();
+		for (const [week, pick] of userPicksByWeek) {
+			if (Number(week) === activeWeek) continue;
+			if (new Date(pick.kickoff_at).getTime() <= now) {
+				locked.add(pick.team_id);
+			}
+		}
+		return locked;
 	});
 
 	const priorWeek = $derived(activeWeek > 1 ? activeWeek - 1 : null);
@@ -277,6 +291,8 @@
 
 	function handleSelectTeam(game: WeekGame, teamId: string) {
 		if (readOnly || !pickingEnabled || saving) return;
+		if (lockedTeamIds.has(teamId)) return;
+		if (new Date(game.kickoff_at).getTime() <= qaNow()) return;
 		const pick = buildDemoPick(game, teamId, underdogThreshold, mode === 'live');
 		if (!pick) return;
 
@@ -438,6 +454,7 @@
 				selectedTeamId={displayTeamId}
 				isSubmittedPickGameId={pickSubmitted && currentPick?.game_id ? currentPick.game_id : null}
 				teamUsageByWeek={usageMap}
+				{lockedTeamIds}
 				{activeWeek}
 				{pickingEnabled}
 				{underdogThreshold}
@@ -451,6 +468,7 @@
 						selectedTeamId={displayTeamId}
 						isSubmittedPick={pickSubmitted && currentPick?.game_id === game.id}
 						teamUsageByWeek={usageMap}
+						{lockedTeamIds}
 						{activeWeek}
 						{pickingEnabled}
 						{showResults}

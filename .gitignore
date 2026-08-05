@@ -17,6 +17,14 @@ Thumbs.db
 .env.*
 !.env.example
 !.env.test
+!.env.e2e.example
+e2e/.sync-nfl-paused-by-e2e
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
 
 # Vite
 vite.config.js.timestamp-*

@@ -19,7 +19,7 @@
 </script>
 
 {#if enabled}
-	<div class="qa-banner" role="status">
+	<div class="qa-banner" role="status" data-testid="qa-banner">
 		<span class="qa-dot" aria-hidden="true"></span>
 		<span class="qa-text">
 			QA Mode — simulated time:{' '}

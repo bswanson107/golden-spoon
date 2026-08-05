@@ -352,7 +352,7 @@
 					</thead>
 					<tbody>
 						{#each games as game (game.id)}
-							<tr>
+							<tr data-game-id={game.id} data-matchup="{game.away.abbreviation}@{game.home.abbreviation}">
 								<td>{game.away.abbreviation} @ {game.home.abbreviation}</td>
 								<td>{formatGameKickoffShort(game.kickoff_at)}</td>
 								<td>

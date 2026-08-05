@@ -4,6 +4,7 @@
 	import WinPctBar from '$lib/components/pick/WinPctBar.svelte';
 	import { getTeamName, getTeamSurfaceTint } from '$lib/data/nflTeams';
 	import { isUnderdog } from '$lib/demo';
+	import { qaNow } from '$lib/qaClock.svelte';
 	import type { WeekGame } from '$lib/types/game';
 
 	let {
@@ -11,6 +12,7 @@
 		selectedTeamId = null,
 		isSubmittedPick = false,
 		teamUsageByWeek = new Map<string, number>(),
+		lockedTeamIds = new Set<string>(),
 		activeWeek = 1,
 		pickingEnabled = true,
 		showResults = false,
@@ -21,6 +23,8 @@
 		selectedTeamId?: string | null;
 		isSubmittedPick?: boolean;
 		teamUsageByWeek?: Map<string, number>;
+		/** Teams whose earlier-week pick has already kicked off — not movable. */
+		lockedTeamIds?: Set<string>;
 		activeWeek?: number;
 		pickingEnabled?: boolean;
 		showResults?: boolean;
@@ -30,17 +34,35 @@
 
 	const logoSize = 92;
 
-	function teamState(teamId: string): 'selected' | 'selectable' | 'locked' | 'used-elsewhere' {
-		if (selectedTeamId === teamId) return pickingEnabled ? 'selectable' : 'selected';
-		if (!pickingEnabled) return 'locked';
+	type TeamState = 'selected' | 'selectable' | 'locked' | 'used-elsewhere' | 'used-locked';
+
+	const gameKickedOff = $derived(new Date(game.kickoff_at).getTime() <= qaNow());
+
+	function teamState(teamId: string): TeamState {
+		if (selectedTeamId === teamId) {
+			return pickingEnabled && !gameKickedOff ? 'selectable' : 'selected';
+		}
+		if (!pickingEnabled || gameKickedOff) return 'locked';
 		const usedWeek = teamUsageByWeek.get(teamId);
-		if (usedWeek !== undefined && usedWeek !== activeWeek) return 'used-elsewhere';
+		if (usedWeek !== undefined && usedWeek !== activeWeek) {
+			if (lockedTeamIds.has(teamId)) return 'used-locked';
+			return 'used-elsewhere';
+		}
 		return 'selectable';
+	}
+
+	function isDisabled(teamId: string): boolean {
+		const state = teamState(teamId);
+		// `selected` = current pick but no longer changeable (kickoff passed / week closed)
+		return state === 'locked' || state === 'used-locked' || state === 'selected';
 	}
 
 	function teamTitle(teamId: string): string | undefined {
 		const usedWeek = teamUsageByWeek.get(teamId);
 		if (usedWeek === undefined) return undefined;
+		if (lockedTeamIds.has(teamId) && usedWeek !== activeWeek) {
+			return `Locked — picked Week ${usedWeek}`;
+		}
 		return `Already selected — Week ${usedWeek}`;
 	}
 
@@ -50,8 +72,7 @@
 	}
 
 	function handleSelect(teamId: string) {
-		const state = teamState(teamId);
-		if (state === 'locked') return;
+		if (isDisabled(teamId)) return;
 		onSelectTeam?.(teamId);
 	}
 
@@ -89,7 +110,7 @@
 			class:is-submitted-pick={isSubmittedPick && selectedTeamId === game.away.id}
 			data-team-id={game.away.id}
 			style:--team-tint={getTeamSurfaceTint(game.away.id)}
-			disabled={teamState(game.away.id) === 'locked'}
+			disabled={isDisabled(game.away.id)}
 			title={teamTitle(game.away.id)}
 			onclick={() => handleSelect(game.away.id)}
 		>
@@ -119,7 +140,7 @@
 			class:is-submitted-pick={isSubmittedPick && selectedTeamId === game.home.id}
 			data-team-id={game.home.id}
 			style:--team-tint={getTeamSurfaceTint(game.home.id)}
-			disabled={teamState(game.home.id) === 'locked'}
+			disabled={isDisabled(game.home.id)}
 			title={teamTitle(game.home.id)}
 			onclick={() => handleSelect(game.home.id)}
 		>
@@ -238,6 +259,7 @@
 		opacity: 0.92;
 	}
 
+	.team-side.used-locked,
 	.team-side.locked {
 		opacity: 0.45;
 		cursor: not-allowed;

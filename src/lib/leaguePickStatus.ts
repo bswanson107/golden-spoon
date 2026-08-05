@@ -79,6 +79,12 @@ export function getPickCtaState(
 		return { kind: 'hidden' };
 	}
 
+	// Once the week's last kickoff has passed, the window is closed for everyone
+	// (with or without a pick).
+	if (hasWeekClosed(games, now)) {
+		return { kind: 'closed', week: weekNumber };
+	}
+
 	if (userPick) {
 		const kickedOff = new Date(userPick.kickoff_at).getTime() <= now;
 

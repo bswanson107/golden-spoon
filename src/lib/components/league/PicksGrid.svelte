@@ -231,7 +231,15 @@
 						{@const pick = player.picks.get(week)}
 						{@const display =
 							cellDisplays.get(pickSubmissionKey(player.userId, week)) ?? 'empty'}
-						<td class="pick-cell">
+						<td
+							class="pick-cell"
+							data-testid="pick-cell"
+							data-user={player.userId}
+							data-week={week}
+							data-state={display}
+							data-team={display === 'visible' && pick ? pick.team_abbreviation : ''}
+							data-auto={pick?.is_auto_pick ? 'true' : 'false'}
+						>
 							{#if display === 'hidden'}
 								<span class="pick-ring ring-hidden" title={hiddenPickTitle(player.userId)}>
 									<span class="ring-icon" aria-hidden="true">🔒</span>
