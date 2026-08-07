@@ -66,6 +66,7 @@ function mapMembership(row: {
 export async function ensurePublicDemoMemberships(): Promise<{ error: string | null }> {
 	const supabase = getSupabase();
 
+	// Historical RPC name — after migration 029 this is a no-op (demo is view-only).
 	const { error } = await supabase.rpc('ensure_public_demo_memberships');
 
 	if (error) {
@@ -78,7 +79,7 @@ export async function ensurePublicDemoMemberships(): Promise<{ error: string | n
 		if (missingRpc) {
 			return {
 				error:
-					'Public demo league is not set up on the database yet. Run migration 026 in Supabase SQL Editor, or locally: npm run db:apply-public-demo-league (requires SUPABASE_DB_URL in .env).'
+					'Public demo league is not set up on the database yet. Run migration 026 (and 029) in Supabase SQL Editor, or locally: npm run db:apply-public-demo-league then npm run db:apply-lock-public-demo (requires SUPABASE_DB_URL in .env).'
 			};
 		}
 		return { error: error.message };
@@ -87,15 +88,24 @@ export async function ensurePublicDemoMemberships(): Promise<{ error: string | n
 	return { error: null };
 }
 
+function asLeagueWithRole(league: League, userId: string, joinedAt: string): LeagueWithRole {
+	return {
+		...league,
+		is_public_demo: Boolean(league.is_public_demo),
+		is_commissioner: league.commissioner_id === userId,
+		joined_at: joinedAt
+	};
+}
+
 export async function fetchMyLeagues(userId: string): Promise<{
 	leagues: LeagueWithRole[];
 	error: string | null;
 }> {
 	const supabase = getSupabase();
 
-	const demoJoin = await ensurePublicDemoMemberships();
-	if (demoJoin.error && !demoJoin.error.includes('not set up on the database yet')) {
-		return { leagues: [], error: demoJoin.error };
+	const demoSetup = await ensurePublicDemoMemberships();
+	if (demoSetup.error && !demoSetup.error.includes('not set up on the database yet')) {
+		return { leagues: [], error: demoSetup.error };
 	}
 
 	const { data, error } = await supabase
@@ -115,8 +125,8 @@ export async function fetchMyLeagues(userId: string): Promise<{
 	if (error) {
 		// Older DBs without is_public_demo still work if the column select fails —
 		// surface the original error so migration messaging is clear.
-		if (error.message.includes('is_public_demo') && demoJoin.error) {
-			return { leagues: [], error: demoJoin.error };
+		if (error.message.includes('is_public_demo') && demoSetup.error) {
+			return { leagues: [], error: demoSetup.error };
 		}
 		return { leagues: [], error: error.message };
 	}
@@ -127,16 +137,38 @@ export async function fetchMyLeagues(userId: string): Promise<{
 		.map((league) => ({
 			...league,
 			is_public_demo: Boolean(league.is_public_demo)
-		}))
-		.sort((a, b) => {
-			// Keep public demos easy to find at the top.
-			if (a.is_public_demo !== b.is_public_demo) {
-				return a.is_public_demo ? -1 : 1;
-			}
-			return new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime();
-		});
+		}));
 
-	return { leagues, error: null };
+	// Public demo is listed for every signed-in user without adding them as members.
+	const { data: publicDemos, error: demoError } = await supabase
+		.from('leagues')
+		.select(LEAGUE_SELECT)
+		.eq('is_public_demo', true)
+		.eq('is_active', true);
+
+	if (demoError && demoError.message.includes('is_public_demo') && demoSetup.error) {
+		return { leagues: [], error: demoSetup.error };
+	}
+
+	const byId = new Map(leagues.map((league) => [league.id, league]));
+	for (const row of publicDemos ?? []) {
+		const league = row as League;
+		if (byId.has(league.id)) continue;
+		byId.set(
+			league.id,
+			asLeagueWithRole(league, userId, league.created_at)
+		);
+	}
+
+	const merged = [...byId.values()].sort((a, b) => {
+		// Keep public demos easy to find at the top.
+		if (a.is_public_demo !== b.is_public_demo) {
+			return a.is_public_demo ? -1 : 1;
+		}
+		return new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime();
+	});
+
+	return { leagues: merged, error: null };
 }
 
 /** After sign-in: land on the sole league, or the league list when there are zero or many. */
@@ -314,7 +346,7 @@ export async function fetchLeague(
 ): Promise<{ league: LeagueWithRole | null; error: string | null }> {
 	const supabase = getSupabase();
 
-	// Public demos are joinable without an invite; ensure membership before select.
+	// Keep RPC for setup detection; after 029 it no longer inserts memberships.
 	await ensurePublicDemoMemberships();
 
 	const { data, error } = await supabase
@@ -327,20 +359,26 @@ export async function fetchLeague(
 		return { league: null, error: error?.message ?? 'League not found.' };
 	}
 
+	const league = data as League;
+	const isPublicDemo = Boolean(league.is_public_demo);
+
 	const { data: membership } = await supabase
 		.from('league_members')
 		.select('joined_at')
 		.eq('league_id', leagueId)
 		.eq('user_id', userId)
-		.single();
+		.maybeSingle();
+
+	if (!membership && !isPublicDemo) {
+		return { league: null, error: 'League not found.' };
+	}
 
 	return {
-		league: {
-			...data,
-			is_public_demo: Boolean(data.is_public_demo),
-			is_commissioner: data.commissioner_id === userId,
-			joined_at: membership?.joined_at ?? data.created_at
-		},
+		league: asLeagueWithRole(
+			league,
+			userId,
+			membership?.joined_at ?? league.created_at
+		),
 		error: null
 	};
 }

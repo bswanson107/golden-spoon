@@ -15,6 +15,7 @@
 		"db:apply-public-demo-league": "node scripts/apply-sql.mjs supabase/migrations/026_public_demo_league.sql",
 		"db:apply-fix-qa-auto-mnf": "node scripts/apply-sql.mjs supabase/migrations/027_fix_qa_auto_mnf_rls.sql",
 		"db:apply-e2e-admin": "node scripts/apply-sql.mjs supabase/migrations/028_e2e_admin_user.sql",
+		"db:apply-lock-public-demo": "node scripts/apply-sql.mjs supabase/migrations/029_lock_public_demo_membership.sql",
 		"db:generate-games": "node --import tsx/esm scripts/generate-games-migration.mjs",
 		"test:e2e": "playwright test --config=e2e/playwright.config.ts",
 		"test:e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui",

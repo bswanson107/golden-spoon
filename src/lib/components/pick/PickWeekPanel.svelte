@@ -541,7 +541,8 @@
 		-webkit-backdrop-filter: blur(8px);
 		border: none;
 		box-shadow: none;
-		overflow-x: clip;
+		overflow-x: auto;
+		overflow-y: visible;
 	}
 
 	.sticky-top-row {

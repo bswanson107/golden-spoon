@@ -75,6 +75,10 @@
 	--logo-tile-bg: #eef1f6;
 	--logo-tile-border: rgba(255, 255, 255, 0.12);
 	--logo-tile-shadow: var(--shadow-sm);
+
+	--stripe-a: color-mix(in srgb, var(--text) 3.5%, var(--surface));
+	--stripe-b: color-mix(in srgb, var(--text) 8%, var(--surface));
+	--stripe-hover: color-mix(in srgb, var(--text) 12%, var(--surface));
 }
 
 [data-theme='light'] {
@@ -129,6 +133,10 @@
 	--logo-tile-bg: #eef1f6;
 	--logo-tile-border: rgba(0, 0, 0, 0.12);
 	--logo-tile-shadow: var(--shadow-sm);
+
+	--stripe-a: color-mix(in srgb, var(--text) 9%, var(--surface));
+	--stripe-b: color-mix(in srgb, var(--text) 16%, var(--surface));
+	--stripe-hover: color-mix(in srgb, var(--text) 22%, var(--surface));
 }
 
 /* ── Brand text: gold foreground in dark, neutral in light ── */

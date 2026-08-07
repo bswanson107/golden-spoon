@@ -86,6 +86,17 @@
 		return teamUsageByWeek.get(teamId);
 	}
 
+	function yourPickTooltip(): string {
+		return `This is your Week ${activeWeek} pick. You can change it until kickoff.`;
+	}
+
+	const underdawgTooltip =
+		'Successfully picking an underdawg team awards an additional point.';
+
+	function usedWeekTooltip(teamAbbr: string, usedWeek: number): string {
+		return `You already picked ${teamAbbr} in Week ${usedWeek}. Moving your pick to Week ${activeWeek} will remove your previous selection.`;
+	}
+
 	function scoreLine(): string | null {
 		if (!showResults || game.status !== 'final') return null;
 		if (game.home_score === null || game.away_score === null) return null;
@@ -121,14 +132,28 @@
 			<span class="team-name">{displayName(game.away.id, game.away.name)}</span>
 			<div class="badges">
 				{#if pickBadge(game.away.id) === 'current'}
-					<span class="pick-marker pick-marker-current">Your pick</span>
+					<span
+						class="pick-marker pick-marker-current"
+						data-tooltip={yourPickTooltip()}
+						title={yourPickTooltip()}
+						tabindex="0"
+					>Your pick</span>
 				{:else if pickBadge(game.away.id) === 'other'}
-					<span class="pick-marker pick-marker-other"
-						>Picked WK {pickBadgeOtherWeek(game.away.id)}</span
-					>
+					{@const usedWk = pickBadgeOtherWeek(game.away.id)!}
+					<span
+						class="pick-marker pick-marker-other"
+						data-tooltip={usedWeekTooltip(game.away.abbreviation, usedWk)}
+						title={usedWeekTooltip(game.away.abbreviation, usedWk)}
+						tabindex="0"
+					>Picked WK {usedWk}</span>
 				{/if}
 				{#if game.away_win_pct !== null && isUnderdog(game.away_win_pct, underdogThreshold)}
-					<span class="underdawg-badge">Underdawg · 2 pts</span>
+					<span
+						class="underdawg-badge"
+						data-tooltip={underdawgTooltip}
+						title={underdawgTooltip}
+						tabindex="0"
+					>Underdawg · 2 pts</span>
 				{/if}
 			</div>
 		</button>
@@ -151,14 +176,28 @@
 			<span class="team-name">{displayName(game.home.id, game.home.name)}</span>
 			<div class="badges">
 				{#if pickBadge(game.home.id) === 'current'}
-					<span class="pick-marker pick-marker-current">Your pick</span>
+					<span
+						class="pick-marker pick-marker-current"
+						data-tooltip={yourPickTooltip()}
+						title={yourPickTooltip()}
+						tabindex="0"
+					>Your pick</span>
 				{:else if pickBadge(game.home.id) === 'other'}
-					<span class="pick-marker pick-marker-other"
-						>Picked WK {pickBadgeOtherWeek(game.home.id)}</span
-					>
+					{@const usedWk = pickBadgeOtherWeek(game.home.id)!}
+					<span
+						class="pick-marker pick-marker-other"
+						data-tooltip={usedWeekTooltip(game.home.abbreviation, usedWk)}
+						title={usedWeekTooltip(game.home.abbreviation, usedWk)}
+						tabindex="0"
+					>Picked WK {usedWk}</span>
 				{/if}
 				{#if game.home_win_pct !== null && isUnderdog(game.home_win_pct, underdogThreshold)}
-					<span class="underdawg-badge">Underdawg · 2 pts</span>
+					<span
+						class="underdawg-badge"
+						data-tooltip={underdawgTooltip}
+						title={underdawgTooltip}
+						tabindex="0"
+					>Underdawg · 2 pts</span>
 				{/if}
 			</div>
 		</button>
@@ -303,6 +342,7 @@
 	}
 
 	.underdawg-badge {
+		position: relative;
 		font-size: 0.65rem;
 		font-weight: 700;
 		color: var(--brand-text);
@@ -310,9 +350,11 @@
 		border-radius: var(--radius);
 		background: var(--brand);
 		box-shadow: var(--shadow-sm);
+		cursor: help;
 	}
 
 	.pick-marker {
+		position: relative;
 		font-size: 0.58rem;
 		font-weight: 800;
 		padding: 0.15rem 0.4rem;
@@ -321,6 +363,50 @@
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 		line-height: 1.2;
+		cursor: help;
+	}
+
+	.pick-marker::after,
+	.underdawg-badge::after {
+		content: attr(data-tooltip);
+		position: absolute;
+		left: 50%;
+		bottom: calc(100% + 0.4rem);
+		transform: translateX(-50%) translateY(0.15rem);
+		padding: 0.35rem 0.55rem;
+		border-radius: var(--radius);
+		background: var(--text);
+		color: var(--surface);
+		font-size: 0.72rem;
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		text-transform: none;
+		white-space: normal;
+		width: max-content;
+		max-width: min(16rem, calc(100vw - 2rem));
+		box-shadow: var(--shadow);
+		opacity: 0;
+		pointer-events: none;
+		transition:
+			opacity 0.12s ease,
+			transform 0.12s ease;
+		z-index: 300;
+		text-align: left;
+		line-height: 1.35;
+	}
+
+	.pick-marker:hover::after,
+	.pick-marker:focus-visible::after,
+	.underdawg-badge:hover::after,
+	.underdawg-badge:focus-visible::after {
+		opacity: 1;
+		transform: translateX(-50%) translateY(0);
+	}
+
+	.pick-marker:focus-visible,
+	.underdawg-badge:focus-visible {
+		outline: 2px solid var(--brand);
+		outline-offset: 2px;
 	}
 
 	.pick-marker-current {

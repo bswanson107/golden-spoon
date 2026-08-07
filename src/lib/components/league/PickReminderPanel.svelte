@@ -57,8 +57,8 @@
 
 <style>
 	.reminder-panel {
-		margin-top: 0.75rem;
-		padding-top: 0.75rem;
+		margin-top: 0.85rem;
+		padding-top: 0.85rem;
 		border-top: 1px solid var(--border);
 	}
 

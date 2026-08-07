@@ -179,6 +179,19 @@
 		letter-spacing: 0.04em;
 	}
 
+	@media (max-width: 640px) {
+		.kickoff.layout-stack.align-end .slot-badge::after {
+			left: auto;
+			right: 0;
+			transform: translateY(0.15rem);
+		}
+
+		.kickoff.layout-stack.align-end .slot-badge:hover::after,
+		.kickoff.layout-stack.align-end .slot-badge:focus-visible::after {
+			transform: translateY(0);
+		}
+	}
+
 	.slot-badge {
 		position: relative;
 		display: inline-flex;
@@ -215,7 +228,7 @@
 		transition:
 			opacity 0.12s ease,
 			transform 0.12s ease;
-		z-index: 5;
+		z-index: 300;
 	}
 
 	.slot-badge:hover::after,

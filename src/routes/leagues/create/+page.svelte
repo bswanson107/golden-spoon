@@ -199,7 +199,7 @@
 	</form>
 
 	<p class="auth-footer">
-		<a href="{base}/leagues">Back to my leagues</a>
+		<a href="{base}/leagues" class="btn btn-ghost back-btn">Back to my leagues</a>
 	</p>
 </main>
 
@@ -220,6 +220,12 @@
 	.page-create .auth-footer {
 		width: 100%;
 		max-width: 24rem;
+		margin-top: 0.85rem;
+	}
+
+	.back-btn {
+		width: 100%;
+		box-sizing: border-box;
 	}
 
 	.muted {

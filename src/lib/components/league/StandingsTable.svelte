@@ -5,8 +5,7 @@
 		DEFAULT_TIEBREAKER_MODE,
 		type TiebreakerMode,
 		parseTiebreakerMode,
-		tiebreakerHint,
-		tiebreakerShortLabel
+		tiebreakerHint
 	} from '$lib/leagueRules';
 
 	let {
@@ -52,32 +51,40 @@
 	}
 </script>
 
-<div class="standings-sticky-bar">
-	{#if stickyTop}
-		<div class="sticky-top">
-			{@render stickyTop()}
-		</div>
-	{/if}
-	<div class="standings-header-row" aria-hidden="true">
-		<span class="h-rank">#</span>
-		<span class="h-player">Player</span>
-		<span class="h-num">Pts</span>
-		<span class="h-num">W-L</span>
-		<span class="h-num" title={tiebreakerHint(resolvedTiebreaker)}>
-			{tiebreakerShortLabel(resolvedTiebreaker)}
-		</span>
-	</div>
-</div>
-
-<div class="table-wrap">
+<div class="standings-wrap">
 	<table class="standings">
-		<thead class="sr-only">
-			<tr>
-				<th scope="col">#</th>
-				<th scope="col">Player</th>
-				<th scope="col">Pts</th>
-				<th scope="col">W-L</th>
-				<th scope="col">{tiebreakerShortLabel(resolvedTiebreaker)}</th>
+		<!-- colgroup beats the colspan title row for fixed-layout column widths -->
+		<colgroup>
+			<col class="c-rank" />
+			<col class="c-player" />
+			<col class="c-num" />
+			<col class="c-num" />
+			<col class="c-tb" />
+		</colgroup>
+		<thead>
+			{#if stickyTop}
+				<tr class="title-row">
+					<th colspan="5" scope="colgroup">
+						<div class="sticky-top">
+							{@render stickyTop()}
+						</div>
+					</th>
+				</tr>
+			{/if}
+			<tr class="cols-row">
+				<th scope="col" class="col-rank">#</th>
+				<th scope="col" class="col-player">Player</th>
+				<th scope="col" class="col-num">Pts</th>
+				<th scope="col" class="col-num">W-L</th>
+				<th scope="col" class="col-num col-tb">
+					<span
+						class="tb-label"
+						title={tiebreakerHint(resolvedTiebreaker)}
+						aria-label={tiebreakerHint(resolvedTiebreaker)}
+						data-tooltip="Tiebreaker"
+						tabindex="0"
+					>TB</span>
+				</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -88,8 +95,8 @@
 					data-testid="standings-row"
 					data-user={row.user_id.toLowerCase()}
 				>
-					<td class="num rank">{row.standing_rank}</td>
-					<td class="name">
+					<td class="col-rank">{row.standing_rank}</td>
+					<td class="col-player">
 						<span class="name-row">
 							<span class="name-text">
 								{row.display_name}
@@ -111,9 +118,11 @@
 							{/if}
 						</span>
 					</td>
-					<td class="num points" data-testid="standings-points">{row.total_points.toFixed(1)}</td>
-					<td class="num">{formatRecord(row)}</td>
-					<td class="num tb">{row.tiebreaker_picked_team_wins}</td>
+					<td class="col-num points" data-testid="standings-points"
+						>{row.total_points.toFixed(1)}</td
+					>
+					<td class="col-num">{formatRecord(row)}</td>
+					<td class="col-num col-tb tb">{row.tiebreaker_picked_team_wins}</td>
 				</tr>
 			{/each}
 		</tbody>
@@ -121,17 +130,48 @@
 </div>
 
 <style>
-	.standings-sticky-bar {
+	.standings-wrap {
+		overflow: visible;
+		max-width: 100%;
+	}
+
+	.standings {
+		width: 100%;
+		table-layout: fixed;
+		border-collapse: collapse;
+		font-size: 0.9rem;
+	}
+
+	.c-rank {
+		width: 2.25rem;
+	}
+
+	.c-player {
+		width: auto;
+	}
+
+	.c-num {
+		width: 3.75rem;
+	}
+
+	.c-tb {
+		width: 3.25rem;
+	}
+
+	thead {
 		position: sticky;
 		top: var(--app-header-height, 3.75rem);
 		z-index: 40;
-		margin: -1.1rem -1.25rem 0.15rem;
-		padding: 1.1rem 1.25rem 0.45rem;
 		background: var(--surface);
 	}
 
-	.sticky-top {
-		margin-bottom: 0.55rem;
+	.title-row th {
+		padding: 0 0 0.55rem;
+		border: none;
+		font-weight: inherit;
+		text-align: left;
+		vertical-align: bottom;
+		background: var(--surface);
 	}
 
 	.sticky-top :global(.card-title) {
@@ -147,117 +187,139 @@
 		margin-bottom: 0;
 	}
 
-	.standings-header-row {
-		display: grid;
-		grid-template-columns: 6% 36% 16% 16% 26%;
-		align-items: end;
-		gap: 0;
+	.cols-row th {
+		padding: 0.35rem 0.5rem 0.45rem;
+		border-bottom: 1px solid var(--border);
 		color: var(--text-muted);
 		font-weight: 600;
 		font-size: 0.75rem;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
+		vertical-align: bottom;
+		background: var(--surface);
 	}
 
-	.h-rank {
-		text-align: center;
-		padding-right: 0.25rem;
-	}
-
-	.h-player {
-		text-align: left;
-		padding-right: 0.5rem;
-	}
-
-	.h-num {
-		text-align: right;
-		font-variant-numeric: tabular-nums;
-		line-height: 1.25;
-	}
-
-	.sr-only {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		padding: 0;
-		margin: -1px;
-		overflow: hidden;
-		clip: rect(0, 0, 0, 0);
-		white-space: nowrap;
-		border: 0;
-	}
-
-	.table-wrap {
-		overflow-x: auto;
-		max-width: 100%;
-	}
-
-	.standings {
-		width: 100%;
-		table-layout: fixed;
-		border-collapse: collapse;
-		font-size: 0.9rem;
-	}
-
-	th,
 	td {
-		padding: 0.5rem 0.5rem;
-		text-align: left;
+		padding: 0.5rem;
 		border-bottom: 1px solid var(--border);
 		vertical-align: middle;
 	}
 
-	td:first-child {
-		padding-left: 0;
+	tbody tr:nth-child(odd) {
+		background: var(--surface);
 	}
 
-	td:last-child {
+	tbody tr:nth-child(even) {
+		background: var(--stripe-b);
+	}
+
+	.col-rank {
+		text-align: left;
+		padding-left: 0.5rem;
+		padding-right: 0;
+		color: var(--text-muted);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.cols-row .col-rank {
+		padding-left: 0.5rem;
 		padding-right: 0;
 	}
 
-	th:nth-child(1),
-	td:nth-child(1) {
-		width: 6%;
+	.col-player {
+		text-align: left;
+		font-weight: 500;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		padding-left: 1rem;
 	}
 
-	th:nth-child(2),
-	td:nth-child(2) {
-		width: 36%;
+	.cols-row .col-player {
+		font-weight: 600;
+		padding-left: 1rem;
 	}
 
-	th:nth-child(3),
-	td:nth-child(3) {
-		width: 16%;
-	}
-
-	th:nth-child(4),
-	td:nth-child(4) {
-		width: 16%;
-	}
-
-	th:nth-child(5),
-	td:nth-child(5) {
-		width: 26%;
-	}
-
-	.num {
+	.col-num {
 		text-align: right;
 		font-variant-numeric: tabular-nums;
 		white-space: nowrap;
 	}
 
-	.rank {
-		color: var(--text-muted);
-		text-align: center;
-		padding-right: 0.25rem;
+	@media (max-width: 640px) {
+		.c-rank {
+			width: 1.6rem;
+		}
+
+		.c-num {
+			width: 3.1rem;
+		}
+
+		.c-tb {
+			width: 2.5rem;
+		}
+
+		.col-rank,
+		.cols-row .col-rank {
+			padding-left: 0.5rem;
+			padding-right: 0;
+		}
+
+		.col-player,
+		.cols-row .col-player {
+			padding-left: 0.8rem;
+		}
+
+		.col-num {
+			padding-left: 0.25rem;
+			padding-right: 0.35rem;
+		}
+
+		.col-tb {
+			padding-left: 0.25rem;
+		}
 	}
 
-	.name {
-		font-weight: 500;
-		overflow: hidden;
-		text-overflow: ellipsis;
+	.tb-label {
+		position: relative;
+		display: inline-flex;
+		cursor: help;
+	}
+
+	.tb-label::after {
+		content: attr(data-tooltip);
+		position: absolute;
+		right: 0;
+		bottom: calc(100% + 0.4rem);
+		transform: translateY(0.15rem);
+		padding: 0.35rem 0.55rem;
+		border-radius: var(--radius);
+		background: var(--text);
+		color: var(--surface);
+		font-size: 0.72rem;
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		text-transform: none;
 		white-space: nowrap;
-		padding-right: 0.5rem;
+		box-shadow: var(--shadow);
+		opacity: 0;
+		pointer-events: none;
+		transition:
+			opacity 0.12s ease,
+			transform 0.12s ease;
+		z-index: 300;
+	}
+
+	.tb-label:hover::after,
+	.tb-label:focus-visible::after {
+		opacity: 1;
+		transform: translateY(0);
+	}
+
+	.tb-label:focus-visible {
+		outline: 2px solid var(--brand);
+		outline-offset: 2px;
+		border-radius: 0.15rem;
 	}
 
 	.name-row {

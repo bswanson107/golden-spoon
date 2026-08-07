@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { base } from '$app/paths';
 	import { useAuth } from '$lib/auth';
+	import LeagueFooter from '$lib/components/league/LeagueFooter.svelte';
 	import DemoBanner from '$lib/components/pick/DemoBanner.svelte';
 	import PickWeekPanel from '$lib/components/pick/PickWeekPanel.svelte';
 	import SeasonLongPicksModal from '$lib/components/pick/SeasonLongPicksModal.svelte';
@@ -292,12 +293,18 @@
 				onClose={() => (seasonPicksOpen = false)}
 			/>
 		{/if}
+
+		<LeagueFooter
+			bind:league
+			weekNumber={isDemo ? demoState.simulatedWeek : viewWeek}
+		/>
 	{/if}
 </main>
 
 <style>
 	.page-pick {
 		max-width: var(--app-content-max, 50rem);
+		overflow: visible;
 	}
 
 	.muted {

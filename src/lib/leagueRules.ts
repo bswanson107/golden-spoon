@@ -19,8 +19,8 @@ export function parsePickVisibility(value: string | null | undefined): PickVisib
 	return value === 'open' ? 'open' : 'hidden_until_kickoff';
 }
 
-export function tiebreakerShortLabel(mode: TiebreakerMode): string {
-	return mode === 'most_wins' ? 'Tiebreaker ↑' : 'Tiebreaker ↓';
+export function tiebreakerShortLabel(_mode: TiebreakerMode): string {
+	return 'TB';
 }
 
 export function tiebreakerHint(mode: TiebreakerMode): string {

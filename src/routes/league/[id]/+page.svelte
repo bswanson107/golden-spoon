@@ -6,9 +6,8 @@
 	import { isAppAdmin } from '$lib/admin';
 	import DemoBanner from '$lib/components/pick/DemoBanner.svelte';
 	import WeekNavigator from '$lib/components/pick/WeekNavigator.svelte';
-	import PickReminderPanel from '$lib/components/league/PickReminderPanel.svelte';
 	import PickDashboard from '$lib/components/league/PickDashboard.svelte';
-	import LeagueRulesModal from '$lib/components/league/LeagueRulesModal.svelte';
+	import LeagueFooter from '$lib/components/league/LeagueFooter.svelte';
 	import StandingsTable from '$lib/components/league/StandingsTable.svelte';
 	import PicksGrid from '$lib/components/league/PicksGrid.svelte';
 	import {
@@ -29,11 +28,9 @@
 	import {
 		adminDeleteLeague,
 		adminKickLeagueMember,
-		fetchLeague,
-		updateLeagueInviteCode
+		fetchLeague
 	} from '$lib/leagues';
 	import {
-		normalizeUnderdogThreshold,
 		parsePickVisibility,
 		parseTiebreakerMode
 	} from '$lib/leagueRules';
@@ -66,16 +63,10 @@
 	let viewWeek = $state(1);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
-	let copied = $state(false);
-	let editingInvite = $state(false);
-	let inviteDraft = $state('');
-	let inviteSaving = $state(false);
-	let inviteError = $state<string | null>(null);
 	let kickingUserId = $state<string | null>(null);
 	let kickError = $state<string | null>(null);
 	let deletingLeague = $state(false);
 	let deleteLeagueError = $state<string | null>(null);
-	let rulesOpen = $state(false);
 
 	const leagueId = $derived($page.params.id);
 
@@ -237,7 +228,6 @@
 		}
 	});
 
-	const rulesThreshold = $derived(normalizeUnderdogThreshold(league?.underdog_threshold_pct));
 	const rulesTiebreakerMode = $derived(parseTiebreakerMode(league?.tiebreaker_mode));
 	const rulesPickVisibility = $derived(parsePickVisibility(league?.pick_visibility));
 
@@ -499,46 +489,6 @@
 		return () => document.removeEventListener('visibilitychange', onVisible);
 	});
 
-	async function copyInviteCode() {
-		if (!league) return;
-		try {
-			await navigator.clipboard.writeText(league.invite_code);
-			copied = true;
-			setTimeout(() => {
-				copied = false;
-			}, 2000);
-		} catch {
-			// fallback: user can select manually
-		}
-	}
-
-	function startEditInvite() {
-		if (!league) return;
-		inviteDraft = league.invite_code;
-		inviteError = null;
-		editingInvite = true;
-	}
-
-	function cancelEditInvite() {
-		editingInvite = false;
-		inviteError = null;
-		inviteDraft = '';
-	}
-
-	async function saveInviteCode() {
-		if (!league) return;
-		inviteError = null;
-		inviteSaving = true;
-		const { inviteCode, error: saveError } = await updateLeagueInviteCode(league.id, inviteDraft);
-		inviteSaving = false;
-		if (saveError || !inviteCode) {
-			inviteError = saveError ?? 'Could not update invite code.';
-			return;
-		}
-		league = { ...league, invite_code: inviteCode };
-		editingInvite = false;
-		inviteDraft = '';
-	}
 </script>
 
 <main class="page page-league">
@@ -595,83 +545,6 @@
 					<a href="{base}/league/{league.id}/pick" class="btn btn-primary demo-picks-link">
 						View Pick Selections
 					</a>
-				{/if}
-			</section>
-		{/if}
-
-		{#if league.is_commissioner}
-			<section class="card commissioner-tools">
-				<div class="commissioner-tools-row">
-					<div>
-						<h2 class="card-title">Commissioner</h2>
-						<p class="muted">Override picks, fix scores, and view sync diagnostics.</p>
-					</div>
-					<a href="{base}/league/{league.id}/admin" class="btn btn-ghost btn-sm">Admin tools</a>
-				</div>
-				{#if !isDemo}
-					<PickReminderPanel
-						weekNumber={viewWeek}
-						standings={leagueView.standings}
-						picks={leagueView.picks}
-						games={liveWeekGames}
-					/>
-				{/if}
-			</section>
-
-			<section class="card">
-				<h2 class="card-title">Invite family</h2>
-				<p class="muted">Share this code so others can join.</p>
-				{#if editingInvite}
-					<div class="invite-edit">
-						<input
-							type="text"
-							class="invite-input"
-							name="inviteCode"
-							minlength="3"
-							maxlength="32"
-							autocapitalize="off"
-							autocomplete="off"
-							spellcheck="false"
-							bind:value={inviteDraft}
-							disabled={inviteSaving}
-						/>
-						<div class="invite-row">
-							<button
-								type="button"
-								class="btn btn-primary btn-sm"
-								onclick={saveInviteCode}
-								disabled={inviteSaving}
-							>
-								{inviteSaving ? 'Saving…' : 'Save'}
-							</button>
-							<button
-								type="button"
-								class="btn btn-ghost btn-sm"
-								onclick={cancelEditInvite}
-								disabled={inviteSaving}
-							>
-								Cancel
-							</button>
-						</div>
-						{#if inviteError}
-							<p class="auth-error" role="alert">{inviteError}</p>
-						{/if}
-						<p class="muted invite-hint">
-							Letters, numbers, and hyphens only. Must be unique across all leagues.
-						</p>
-					</div>
-				{:else}
-					<div class="invite-row invite-display">
-						<code class="invite-code">{league.invite_code}</code>
-						<div class="invite-actions">
-							<button type="button" class="btn btn-ghost btn-sm" onclick={copyInviteCode}>
-								{copied ? 'Copied!' : 'Copy'}
-							</button>
-							<button type="button" class="btn btn-ghost btn-sm" onclick={startEditInvite}>
-								Edit
-							</button>
-						</div>
-					</div>
 				{/if}
 			</section>
 		{/if}
@@ -753,21 +626,12 @@
 			{/if}
 		</section>
 
-		<footer class="league-footer">
-			<button type="button" class="btn btn-ghost btn-sm" onclick={() => (rulesOpen = true)}>
-				Rules
-			</button>
-			<a href="{base}/leagues" class="btn btn-ghost btn-sm">Other leagues</a>
-		</footer>
-
-		<LeagueRulesModal
-			open={rulesOpen}
-			leagueName={league.name}
-			seasonYear={league.season_year}
-			threshold={rulesThreshold}
-			tiebreakerMode={rulesTiebreakerMode}
-			pickVisibility={rulesPickVisibility}
-			onClose={() => (rulesOpen = false)}
+		<LeagueFooter
+			bind:league
+			weekNumber={viewWeek}
+			standings={leagueView.standings}
+			picks={leagueView.picks}
+			games={liveWeekGames}
 		/>
 	{/if}
 </main>
@@ -775,6 +639,7 @@
 <style>
 	.page-league {
 		max-width: var(--app-content-max, 50rem);
+		overflow: visible;
 	}
 
 	.league-title-row {
@@ -836,84 +701,6 @@
 		margin: 0 0 0.35rem;
 		font-size: 1rem;
 		color: var(--text);
-	}
-
-	.invite-row {
-		display: flex;
-		align-items: center;
-		flex-wrap: wrap;
-		gap: 0.75rem;
-		margin-top: 0.75rem;
-	}
-
-	.invite-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.invite-edit {
-		margin-top: 0.75rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.invite-edit .invite-row {
-		margin-top: 0;
-	}
-
-	.invite-input {
-		width: 100%;
-		max-width: 20rem;
-		font-size: 1.1rem;
-		font-weight: 700;
-		letter-spacing: 0.04em;
-		font-family: var(--font-mono, ui-monospace, monospace);
-	}
-
-	.invite-hint {
-		margin: 0;
-		font-size: 0.82rem;
-	}
-
-	.invite-code {
-		font-size: 1.25rem;
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		color: var(--brand);
-		padding: 0.5rem 0.75rem;
-		border-radius: var(--radius);
-		background: var(--brand-muted);
-		box-shadow: var(--shadow-sm);
-	}
-
-	:global([data-theme='light']) .invite-code {
-		color: var(--text);
-	}
-
-	@media (max-width: 480px) {
-		.invite-display {
-			flex-direction: column;
-			align-items: flex-start;
-		}
-	}
-
-	.commissioner-tools-row {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 1rem;
-	}
-
-	.league-footer {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: center;
-		gap: 0.75rem;
-		margin-top: 2rem;
-		padding-top: 1.25rem;
-		border-top: 1px solid var(--border);
 	}
 
 	.demo-view-note {

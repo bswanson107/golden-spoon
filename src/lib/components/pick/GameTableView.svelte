@@ -49,6 +49,10 @@
 		return state === 'locked' || state === 'used-locked' || state === 'selected';
 	}
 
+	function hasOutline(state: TeamState, isSelected: boolean): boolean {
+		return isSelected || state === 'used-elsewhere';
+	}
+
 	function displayName(teamId: string, fallbackName: string): string {
 		const fromCatalog = getTeamName(teamId);
 		return fromCatalog !== teamId ? fromCatalog : fallbackName;
@@ -63,6 +67,17 @@
 		if (usedWeek === undefined || usedWeek === activeWeek) return undefined;
 		if (lockedTeamIds.has(teamId)) return `Locked — picked Week ${usedWeek}`;
 		return `Already selected — Week ${usedWeek}`;
+	}
+
+	function yourPickTooltip(): string {
+		return `This is your Week ${activeWeek} pick. You can change it until kickoff.`;
+	}
+
+	const underdawgTooltip =
+		'Successfully picking an underdawg team awards an additional point.';
+
+	function usedWeekTooltip(teamAbbr: string, usedWeek: number): string {
+		return `You already picked ${teamAbbr} in Week ${usedWeek}. Moving your pick to Week ${activeWeek} will remove your previous selection.`;
 	}
 </script>
 
@@ -81,6 +96,7 @@
 					{ team: game.away, side: 'Away', winPct: game.away_win_pct },
 					{ team: game.home, side: 'Home', winPct: game.home_win_pct }
 				]}
+				{@const gameStripe = gi % 2 === 0 ? 'game-a' : 'game-b'}
 				{#if gi > 0}
 					<tr class="game-divider" aria-hidden="true">
 						<td colspan="2"></td>
@@ -91,12 +107,15 @@
 					{@const isSelected = selectedTeamId === team.id}
 					{@const isUD = winPct !== null && isUnderdog(winPct, underdogThreshold)}
 					{@const usedWk = usedWeekFor(team.id)}
-					{@const stripe = (gi * 2 + ti) % 2 === 0 ? 'stripe-a' : 'stripe-b'}
+					{@const outlined = hasOutline(state, isSelected)}
 					{@const fullName = displayName(team.id, team.name)}
 					<tr
-						class="team-row {state} {stripe}"
+						class="team-row {state} {gameStripe}"
 						class:is-selected={isSelected}
 						class:is-submitted={isSubmitted && isSelected}
+						class:has-outline={outlined}
+						class:is-away={ti === 0}
+						class:is-home={ti === 1}
 						title={teamTitle(team.id)}
 						onclick={() => !isDisabled(state) && onSelectTeam?.(game, team.id)}
 						role="button"
@@ -123,12 +142,27 @@
 									{#if isSelected || usedWk !== undefined || isUD}
 										<span class="badges">
 											{#if isSelected}
-												<span class="badge badge-pick">Your pick</span>
+												<span
+													class="badge badge-pick"
+													data-tooltip={yourPickTooltip()}
+													title={yourPickTooltip()}
+													tabindex="0"
+												>Your pick</span>
 											{:else if usedWk !== undefined}
-												<span class="badge badge-used">Wk {usedWk}</span>
+												<span
+													class="badge badge-used"
+													data-tooltip={usedWeekTooltip(team.abbreviation, usedWk)}
+													title={usedWeekTooltip(team.abbreviation, usedWk)}
+													tabindex="0"
+												>Wk {usedWk}</span>
 											{/if}
 											{#if isUD}
-												<span class="badge badge-ud">Underdawg</span>
+												<span
+													class="badge badge-ud"
+													data-tooltip={underdawgTooltip}
+													title={underdawgTooltip}
+													tabindex="0"
+												>Underdawg</span>
 											{/if}
 										</span>
 									{/if}
@@ -150,7 +184,7 @@
 
 <style>
 	.table-wrap {
-		overflow-x: clip;
+		overflow: visible;
 		max-width: 100%;
 	}
 
@@ -187,7 +221,6 @@
 	.team-row td.col-kickoff {
 		padding: 0.45rem 0.45rem;
 		vertical-align: middle;
-		background: var(--surface-2);
 		border: none;
 		cursor: default;
 	}
@@ -208,17 +241,32 @@
 		align-items: center;
 		padding: 0.45rem 0.35rem 0.45rem 0.5rem;
 		border: 2px solid transparent;
-		background: color-mix(in srgb, var(--text) 3.5%, var(--surface));
 		transition: background 0.12s ease;
 	}
 
-	.team-row.stripe-b .pick-block {
-		background: color-mix(in srgb, var(--text) 8%, var(--surface));
+	/* Collapse the shared edge so away/home backgrounds meet with no hairline gap. */
+	.team-row.is-away .pick-block {
+		border-bottom-width: 0;
+	}
+
+	.team-row.is-home .pick-block {
+		border-top-width: 0;
+	}
+
+	/* Entire matchup shares one background (away + home + kickoff). */
+	.team-row.game-a .pick-block,
+	.team-row.game-a td.col-kickoff {
+		background: var(--stripe-a);
+	}
+
+	.team-row.game-b .pick-block,
+	.team-row.game-b td.col-kickoff {
+		background: var(--stripe-b);
 	}
 
 	.team-row.selectable:hover .pick-block,
 	.team-row.used-elsewhere:hover .pick-block {
-		background: color-mix(in srgb, var(--text) 12%, var(--surface));
+		background: var(--stripe-hover);
 	}
 
 	.team-row.locked .pick-block,
@@ -238,6 +286,20 @@
 		background: color-mix(in srgb, var(--brand-muted) 70%, var(--surface));
 		border-style: solid;
 		border-color: var(--brand);
+	}
+
+	/* Only one teammate outlined — close that team's open shared edge. */
+	.team-row.has-outline.is-away:not(:has(+ .team-row.has-outline)) .pick-block {
+		border-bottom-width: 2px;
+	}
+
+	.team-row.is-away:not(.has-outline) + .team-row.has-outline.is-home .pick-block {
+		border-top-width: 2px;
+	}
+
+	/* Both outlined — one shared divider (home top border only). */
+	.team-row.has-outline.is-away + .team-row.has-outline.is-home .pick-block {
+		border-top-width: 2px;
 	}
 
 	:global([data-theme='light']) .team-row.is-selected .pick-block,
@@ -333,6 +395,7 @@
 	}
 
 	.badge {
+		position: relative;
 		font-size: 0.58rem;
 		font-weight: 800;
 		text-transform: uppercase;
@@ -341,6 +404,47 @@
 		border-radius: var(--radius);
 		line-height: 1.3;
 		white-space: nowrap;
+		box-shadow: var(--shadow-sm);
+		cursor: help;
+	}
+
+	.badge::after {
+		content: attr(data-tooltip);
+		position: absolute;
+		left: 50%;
+		bottom: calc(100% + 0.4rem);
+		transform: translateX(-50%) translateY(0.15rem);
+		padding: 0.35rem 0.55rem;
+		border-radius: var(--radius);
+		background: var(--text);
+		color: var(--surface);
+		font-size: 0.72rem;
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		text-transform: none;
+		white-space: normal;
+		width: max-content;
+		max-width: min(16rem, calc(100vw - 2rem));
+		box-shadow: var(--shadow);
+		opacity: 0;
+		pointer-events: none;
+		transition:
+			opacity 0.12s ease,
+			transform 0.12s ease;
+		z-index: 300;
+		text-align: left;
+		line-height: 1.35;
+	}
+
+	.badge:hover::after,
+	.badge:focus-visible::after {
+		opacity: 1;
+		transform: translateX(-50%) translateY(0);
+	}
+
+	.badge:focus-visible {
+		outline: 2px solid var(--brand);
+		outline-offset: 2px;
 	}
 
 	.badge-pick {

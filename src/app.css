@@ -42,6 +42,7 @@ main.page {
 	margin: 2rem auto;
 	padding: 0 var(--app-content-gutter, 1rem);
 	box-sizing: border-box;
+	overflow: visible;
 }
 
 main.page-wide {
@@ -126,6 +127,14 @@ p.page-subtitle {
 		box-shadow 0.08s ease;
 }
 
+/* Anchors styled as buttons should not pick up global link colors. */
+a.btn,
+a.btn:visited,
+a.btn:hover,
+a.btn:active {
+	text-decoration: none;
+}
+
 .btn:active:not(:disabled) {
 	transform: translate(1px, 1px);
 	box-shadow: var(--shadow-press);
@@ -141,6 +150,13 @@ p.page-subtitle {
 	color: var(--brand-text);
 }
 
+a.btn-primary,
+a.btn-primary:visited,
+a.btn-primary:hover,
+a.btn-primary:active {
+	color: var(--brand-text);
+}
+
 .btn-primary:hover:not(:disabled) {
 	filter: brightness(1.05);
 }
@@ -151,6 +167,13 @@ p.page-subtitle {
 	box-shadow: var(--shadow-sm);
 }
 
+a.btn-ghost,
+a.btn-ghost:visited {
+	color: var(--text-muted);
+}
+
+a.btn-ghost:hover,
+a.btn-ghost:active,
 .btn-ghost:hover:not(:disabled) {
 	color: var(--text);
 }
