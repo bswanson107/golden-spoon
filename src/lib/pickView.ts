@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import { clampSimulatedWeek } from '$lib/demo';
+import { regularSeasonWeek } from '$lib/demo';
 import { qaNowDate } from '$lib/qaClock.svelte';
 import { getCurrentWeekFromDate } from '$lib/season';
 
@@ -18,8 +18,9 @@ export function loadViewWeek(
 
 	try {
 		const raw = localStorage.getItem(viewWeekKey(leagueId, userId));
-		if (!raw) return getCurrentWeekFromDate(qaNowDate(), seasonYear);
-		return clampSimulatedWeek(Number(raw) || 1);
+		const current = getCurrentWeekFromDate(qaNowDate(), seasonYear);
+		if (!raw) return current;
+		return Math.max(regularSeasonWeek(Number(raw) || current), current);
 	} catch {
 		return getCurrentWeekFromDate(qaNowDate(), seasonYear);
 	}
@@ -27,5 +28,5 @@ export function loadViewWeek(
 
 export function saveViewWeek(leagueId: string, userId: string, week: number): void {
 	if (!browser) return;
-	localStorage.setItem(viewWeekKey(leagueId, userId), String(clampSimulatedWeek(week)));
+	localStorage.setItem(viewWeekKey(leagueId, userId), String(regularSeasonWeek(week)));
 }

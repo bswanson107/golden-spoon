@@ -133,6 +133,8 @@
 	.standings-wrap {
 		overflow: visible;
 		max-width: 100%;
+		/* Pull into the card's top padding so it can stick with the header. */
+		margin-top: -1.1rem;
 	}
 
 	.standings {
@@ -166,7 +168,7 @@
 	}
 
 	.title-row th {
-		padding: 0 0 0.55rem;
+		padding: 1.1rem 0 0.55rem;
 		border: none;
 		font-weight: inherit;
 		text-align: left;
@@ -197,6 +199,10 @@
 		letter-spacing: 0.04em;
 		vertical-align: bottom;
 		background: var(--surface);
+	}
+
+	thead:not(:has(.title-row)) .cols-row th {
+		padding-top: calc(1.1rem + 0.35rem);
 	}
 
 	td {

@@ -1,3 +1,5 @@
+import { getCurrentWeekFromDate, REGULAR_SEASON_WEEKS } from '$lib/season';
+import { qaNowDate } from '$lib/qaClock.svelte';
 import { getSupabase } from '$lib/supabase';
 import type { GameStatus, NflTeam, WeekGame } from '$lib/types/game';
 
@@ -142,9 +144,9 @@ export async function fetchSeasonWeekCompletion(
 }
 
 /**
- * Highest week to surface in the season grid: every consecutive completed week
- * from week 1, plus the next (current) week. Reveals week N+1 only once week N's
- * final game is determined — never columns beyond that.
+ * Highest week to surface in the season grid from game results alone:
+ * consecutive completed weeks (last kickoff final/cancelled) plus the next week.
+ * Combine with the Tuesday-midnight calendar rule via `resolveCurrentWeek`.
  */
 export function maxVisibleWeek(weeks: WeekCompletion[]): number {
 	if (weeks.length === 0) return 1;
@@ -155,5 +157,19 @@ export function maxVisibleWeek(weeks: WeekCompletion[]): number {
 	while (week < lastWeek && completeByWeek.get(week) === true) {
 		week += 1;
 	}
-	return week;
+	return Math.min(week, REGULAR_SEASON_WEEKS);
+}
+
+/**
+ * Live current week: MNF final (or cancelled) for week N starts week N+1 immediately,
+ * otherwise week N+1 starts at Tuesday 00:00 ET — whichever happens first.
+ */
+export function resolveCurrentWeek(
+	completions: WeekCompletion[],
+	now: Date = qaNowDate(),
+	seasonYear = 2026
+): number {
+	const calendarWeek = getCurrentWeekFromDate(now, seasonYear);
+	const fromGames = maxVisibleWeek(completions);
+	return Math.min(REGULAR_SEASON_WEEKS, Math.max(calendarWeek, fromGames));
 }

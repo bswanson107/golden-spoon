@@ -19,7 +19,7 @@
 		saveDemoState,
 		simulatedWeekLabel
 	} from '$lib/demo';
-	import { fetchSeasonWeekCompletion, fetchWeekGames, maxVisibleWeek } from '$lib/games';
+	import { fetchSeasonWeekCompletion, fetchWeekGames, resolveCurrentWeek } from '$lib/games';
 	import {
 		getGamesStartedCount,
 		getNextUpcomingKickoff,
@@ -39,7 +39,7 @@
 		qaNowDate,
 		qaSimulatedNowMs
 	} from '$lib/qaClock.svelte';
-	import { getCurrentWeekFromDate, isDemoSeason } from '$lib/season';
+	import { getCurrentWeekFromDate, isDemoSeason, REGULAR_SEASON_WEEKS } from '$lib/season';
 	import { syncSeasonIndicatorForLeague } from '$lib/seasonIndicatorStore.svelte';
 	import { fetchLeaguePicks, fetchLeaguePickSubmissions, fetchLeagueStandings, type PickSubmissionsByCell } from '$lib/standings';
 	import type { DemoState } from '$lib/types/demo';
@@ -220,6 +220,8 @@
 	$effect(() => {
 		const leagueData = league;
 		if (!leagueData) return;
+		void qaSimulatedNowMs();
+		void isQaClockEnabled();
 
 		if (isDemo) {
 			syncSeasonIndicatorForLeague(leagueData.season_year, demoState.simulatedWeek);
@@ -416,7 +418,11 @@
 		let cancelled = false;
 		fetchSeasonWeekCompletion(leagueData.season_year).then((result) => {
 			if (cancelled) return;
-			gridMaxWeek = result.error ? 1 : maxVisibleWeek(result.weeks);
+			const liveWeek = result.error
+				? getCurrentWeekFromDate(qaNowDate(), leagueData.season_year)
+				: resolveCurrentWeek(result.weeks, qaNowDate(), leagueData.season_year);
+			gridMaxWeek = liveWeek;
+			viewWeek = liveWeek;
 		});
 		return () => {
 			cancelled = true;
@@ -451,7 +457,7 @@
 
 		const weeks = [
 			...new Set([...Object.keys(state.picks).map(Number), state.simulatedWeek])
-		];
+		].filter((week) => week >= 1 && week <= REGULAR_SEASON_WEEKS);
 		if (weeks.length === 0) {
 			demoGamesByWeek = new Map();
 			return;
@@ -533,18 +539,30 @@
 
 		{#if isDemo}
 			<section class="demo-travel-wrap">
-				<WeekNavigator
-					viewWeek={demoState.simulatedWeek}
-					onWeekChange={handleDemoWeekChange}
-					label="Simulated time"
-					showReset={!isPublicDemo}
-					canReset={!isPublicDemo && hasDemoPicks(demoState)}
-					onReset={isPublicDemo ? undefined : handleResetDemo}
-				/>
+				<div class="demo-travel-item demo-travel-week">
+					{#if isPublicDemo}
+						<span
+							class="demo-chip"
+							data-tooltip="Select a week in the season to preview what the league standings, scores, and picks looked like at this time"
+							aria-label="Demo. Select a week in the season to preview what the league standings, scores, and picks looked like at this time"
+							tabindex="0"
+						>DEMO</span>
+					{/if}
+					<WeekNavigator
+						viewWeek={demoState.simulatedWeek}
+						onWeekChange={handleDemoWeekChange}
+						label="Simulated time"
+						showReset={!isPublicDemo}
+						canReset={!isPublicDemo && hasDemoPicks(demoState)}
+						onReset={isPublicDemo ? undefined : handleResetDemo}
+					/>
+				</div>
 				{#if isPublicDemo}
-					<a href="{base}/league/{league.id}/pick" class="btn btn-primary demo-picks-link">
-						View Pick Selections
-					</a>
+					<div class="demo-travel-item demo-travel-picks">
+						<a href="{base}/league/{league.id}/pick" class="btn btn-primary demo-picks-link">
+							View Pick Selections
+						</a>
+					</div>
 				{/if}
 			</section>
 		{/if}
@@ -615,7 +633,7 @@
 					standings={leagueView.standings}
 					currentUserId={isPublicDemo ? null : (auth.user?.id ?? null)}
 					viewWeek={null}
-					maxWeek={isDemo ? null : gridMaxWeek}
+					maxWeek={isDemo ? leagueView.maxVisibleWeek : gridMaxWeek}
 					pickSubmissions={visiblePickSubmissions}
 					pickVisibility={rulesPickVisibility}
 				>
@@ -710,14 +728,87 @@
 	.demo-travel-wrap {
 		margin-top: 1.25rem;
 		display: flex;
-		flex-direction: column;
+		flex-direction: row;
+		align-items: stretch;
 		gap: 0.75rem;
 	}
 
-	.demo-picks-link {
+	.demo-travel-item {
+		position: relative;
 		display: flex;
+		min-width: 0;
+	}
+
+	.demo-travel-week {
+		flex: 7 1 0;
+	}
+
+	.demo-travel-picks {
+		flex: 3 1 0;
+		justify-content: flex-end;
+		align-items: flex-start;
+	}
+
+	.demo-travel-week :global(.week-nav) {
+		flex: 1 1 auto;
 		width: 100%;
-		justify-content: center;
-		box-sizing: border-box;
+		min-width: 0;
+	}
+
+	.demo-chip {
+		position: absolute;
+		top: 0.4rem;
+		right: 0.4rem;
+		z-index: 2;
+		padding: 0.15rem 0.4rem;
+		border-radius: var(--radius);
+		background: color-mix(in srgb, var(--link) 18%, var(--surface));
+		color: var(--link);
+		font-size: 0.62rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		line-height: 1.2;
+		box-shadow: var(--shadow-sm);
+		cursor: help;
+	}
+
+	.demo-chip::after {
+		content: attr(data-tooltip);
+		position: absolute;
+		top: calc(100% + 0.4rem);
+		right: 0;
+		z-index: 300;
+		width: max-content;
+		max-width: min(16.5rem, calc(100vw - 2rem));
+		padding: 0.45rem 0.6rem;
+		border-radius: var(--radius);
+		background: var(--text);
+		color: var(--surface);
+		font-size: 0.72rem;
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		line-height: 1.35;
+		text-transform: none;
+		white-space: normal;
+		text-align: left;
+		box-shadow: var(--shadow);
+		opacity: 0;
+		pointer-events: none;
+		transform: translateY(-0.15rem);
+		transition:
+			opacity 0.12s ease,
+			transform 0.12s ease;
+	}
+
+	.demo-chip:hover::after,
+	.demo-chip:focus-visible::after {
+		opacity: 1;
+		transform: translateY(0);
+	}
+
+	.demo-picks-link {
+		display: inline-flex;
+		width: auto;
+		max-width: 100%;
 	}
 </style>

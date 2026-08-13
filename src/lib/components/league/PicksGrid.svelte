@@ -14,6 +14,7 @@
 		type PickSubmissionsByCell,
 		type WeekPickSubmissionStatus
 	} from '$lib/standings';
+	import { REGULAR_SEASON_WEEKS } from '$lib/season';
 	import type { LeaguePick, PickOutcome } from '$lib/types/standings';
 
 	type CellDisplay = 'empty' | 'hidden' | 'visible' | 'missed';
@@ -55,21 +56,26 @@
 	);
 
 	const weeks = $derived.by(() => {
+		const inRegularSeason = (week: number) =>
+			Number.isFinite(week) && week >= 1 && week <= REGULAR_SEASON_WEEKS;
+
 		const fromPicks = picks.map((p) => p.week_number);
 		const fromSubmissions = Object.keys(pickSubmissions).map((key) => {
 			const separator = key.lastIndexOf(':');
 			return separator === -1 ? 0 : Number(key.slice(separator + 1));
 		});
 		const allWeeks = [...new Set([...fromPicks, ...fromSubmissions])]
-			.filter((week) => week > 0)
+			.filter(inRegularSeason)
 			.sort((a, b) => a - b);
 
 		if (viewWeek !== null && viewWeek > 0) {
-			return [viewWeek];
+			const week = Math.min(viewWeek, REGULAR_SEASON_WEEKS);
+			return inRegularSeason(week) ? [week] : [];
 		}
 
 		if (maxWeek !== null && maxWeek > 0) {
-			return Array.from({ length: maxWeek }, (_, i) => i + 1);
+			const capped = Math.min(maxWeek, REGULAR_SEASON_WEEKS);
+			return Array.from({ length: capped }, (_, i) => i + 1);
 		}
 
 		return allWeeks;

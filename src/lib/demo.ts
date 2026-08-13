@@ -6,7 +6,7 @@ import {
 	type TiebreakerMode,
 	parseTiebreakerMode
 } from '$lib/leagueRules';
-import { isDemoSeason } from '$lib/season';
+import { isDemoSeason, REGULAR_SEASON_WEEKS } from '$lib/season';
 import type { DemoPick, DemoState, ScoredDemoPick } from '$lib/types/demo';
 import type { WeekGame } from '$lib/types/game';
 import type { LeaguePick, PickOutcome, StandingRow } from '$lib/types/standings';
@@ -20,7 +20,9 @@ export function demoStorageKey(leagueId: string, userId: string): string {
 }
 
 export const MIN_SIMULATED_WEEK = 1;
-export const MAX_SIMULATED_WEEK = 18;
+/** Sentinel after Week 18: season complete, all regular-season picks visible. */
+export const SEASON_END_WEEK = REGULAR_SEASON_WEEKS + 1;
+export const MAX_SIMULATED_WEEK = SEASON_END_WEEK;
 
 export function createEmptyDemoState(simulatedWeek: number = MIN_SIMULATED_WEEK): DemoState {
 	return {
@@ -34,7 +36,7 @@ export function loadDemoState(leagueId: string, userId: string, seasonYear?: num
 	if (!browser) return createEmptyDemoState();
 
 	const demoDefaultWeek =
-		seasonYear !== undefined && isDemoSeason(seasonYear) ? MAX_SIMULATED_WEEK : MIN_SIMULATED_WEEK;
+		seasonYear !== undefined && isDemoSeason(seasonYear) ? SEASON_END_WEEK : MIN_SIMULATED_WEEK;
 
 	try {
 		const raw = localStorage.getItem(demoStorageKey(leagueId, userId));
@@ -43,10 +45,14 @@ export function loadDemoState(leagueId: string, userId: string, seasonYear?: num
 				? { ...createEmptyDemoState(demoDefaultWeek), enabled: true }
 				: createEmptyDemoState();
 		}
-		const parsed = JSON.parse(raw) as DemoState;
+		const parsed = JSON.parse(raw) as DemoState & { v?: number };
+		const migrateToSeasonEnd =
+			seasonYear !== undefined && isDemoSeason(seasonYear) && parsed.v !== 2;
 		const state: DemoState = {
 			enabled: Boolean(parsed.enabled),
-			simulatedWeek: clampSimulatedWeek(Number(parsed.simulatedWeek) || demoDefaultWeek),
+			simulatedWeek: migrateToSeasonEnd
+				? SEASON_END_WEEK
+				: clampSimulatedWeek(Number(parsed.simulatedWeek) || demoDefaultWeek),
 			picks: parsed.picks ?? {}
 		};
 		if (seasonYear !== undefined && isDemoSeason(seasonYear)) {
@@ -64,7 +70,7 @@ export function loadDemoState(leagueId: string, userId: string, seasonYear?: num
 
 export function saveDemoState(leagueId: string, userId: string, state: DemoState): void {
 	if (!browser) return;
-	localStorage.setItem(demoStorageKey(leagueId, userId), JSON.stringify(state));
+	localStorage.setItem(demoStorageKey(leagueId, userId), JSON.stringify({ ...state, v: 2 }));
 }
 
 export function resetDemoPicks(state: DemoState): DemoState {
@@ -82,11 +88,21 @@ export function clampSimulatedWeek(week: number): number {
 	return Math.min(MAX_SIMULATED_WEEK, Math.max(MIN_SIMULATED_WEEK, week));
 }
 
+export function isSeasonEnd(week: number): boolean {
+	return week >= SEASON_END_WEEK;
+}
+
+/** Map a time-travel value to a real regular-season week (1–18). */
+export function regularSeasonWeek(week: number): number {
+	return Math.min(REGULAR_SEASON_WEEKS, Math.max(MIN_SIMULATED_WEEK, week));
+}
+
 export function getActivePickWeek(simulatedWeek: number): number {
-	return clampSimulatedWeek(simulatedWeek);
+	return regularSeasonWeek(simulatedWeek);
 }
 
 export function canPickWeek(week: number, simulatedWeek: number): boolean {
+	if (isSeasonEnd(simulatedWeek)) return false;
 	return getActivePickWeek(simulatedWeek) === week;
 }
 
@@ -171,7 +187,8 @@ export function buildDemoPick(
 }
 
 export function simulatedWeekLabel(simulatedWeek: number): string {
-	return `Week ${clampSimulatedWeek(simulatedWeek)}`;
+	if (isSeasonEnd(simulatedWeek)) return 'Season End';
+	return `Week ${regularSeasonWeek(simulatedWeek)}`;
 }
 
 export function getLatestScoredPick(
@@ -222,8 +239,8 @@ export function formatWinPct(pct: number | null): string {
 
 /** Latest week whose picks/results appear on the league page while time traveling. */
 export function getMaxVisibleWeek(simulatedWeek: number): number {
-	const week = clampSimulatedWeek(simulatedWeek);
-	return Math.max(0, week - 1);
+	if (isSeasonEnd(simulatedWeek)) return REGULAR_SEASON_WEEKS;
+	return Math.max(0, regularSeasonWeek(simulatedWeek) - 1);
 }
 
 function recordFromPicksForStandings(
@@ -358,7 +375,10 @@ export function mergeDemoLeagueView(
 
 	const mergedPicks = dbPicks.filter(
 		(pick) =>
-			pick.week_number <= maxVisibleWeek && (includeViewer || pick.user_id !== userId)
+			pick.week_number >= 1 &&
+			pick.week_number <= maxVisibleWeek &&
+			pick.week_number <= REGULAR_SEASON_WEEKS &&
+			(includeViewer || pick.user_id !== userId)
 	);
 
 	if (includeViewer) {

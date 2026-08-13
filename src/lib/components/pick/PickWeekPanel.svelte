@@ -10,6 +10,7 @@
 		formatPoints,
 		formatWinPct,
 		outcomeLabel,
+		regularSeasonWeek,
 		resultsVisibleForWeek,
 		scoreDemoPick
 	} from '$lib/demo';
@@ -38,7 +39,8 @@
 		onSavePick,
 		onOpenSeasonOutlook,
 		viewMode = 'card',
-		readOnly = false
+		readOnly = false,
+		currentWeek = null
 	}: {
 		mode: 'demo' | 'live';
 		seasonYear: number;
@@ -57,6 +59,8 @@
 		viewMode?: 'card' | 'table';
 		/** Browse matchups without selecting or saving a pick. */
 		readOnly?: boolean;
+		/** Live current NFL week; weeks before this cannot be picked. */
+		currentWeek?: number | null;
 	} = $props();
 
 	let games = $state<WeekGame[]>([]);
@@ -67,7 +71,7 @@
 	let lastSyncAt = $state<string | null>(null);
 	let syncNotice = $state<string | null>(null);
 
-	const activeWeek = $derived(viewWeek);
+	const activeWeek = $derived(regularSeasonWeek(viewWeek));
 
 	const demoCurrentPick = $derived(
 		mode === 'demo' && demoState ? (demoState.picks[activeWeek] ?? null) : null
@@ -85,8 +89,13 @@
 
 	const pickSubmitted = $derived(mode === 'demo' ? demoCurrentPick !== null : liveCurrentPick !== null);
 
+	const pastWeekLocked = $derived(
+		mode === 'live' && currentWeek !== null && activeWeek < currentWeek
+	);
+
 	const canChangeLivePick = $derived.by(() => {
 		if (mode !== 'live') return true;
+		if (pastWeekLocked) return false;
 		if (!liveCurrentPick) return true;
 		const game = games.find((g) => g.id === liveCurrentPick.game_id);
 		if (!game) return true;
@@ -94,7 +103,7 @@
 	});
 
 	const pickingEnabled = $derived(
-		readOnly ? false : mode === 'demo' ? weekOpen : canChangeLivePick
+		readOnly || pastWeekLocked ? false : mode === 'demo' ? weekOpen : canChangeLivePick
 	);
 
 	const showResults = $derived.by(() => {
@@ -117,9 +126,9 @@
 			const picksMap = new Map(
 				Object.entries(demoState.picks).map(([week, pick]) => [Number(week), pick])
 			);
-			return teamUsageByWeek(picksMap, viewWeek);
+			return teamUsageByWeek(picksMap, activeWeek);
 		}
-		return teamUsageByWeek(userPicksByWeek, viewWeek);
+		return teamUsageByWeek(userPicksByWeek, activeWeek);
 	});
 
 	/** Teams whose earlier-week pick has already kicked off — cannot be moved. */
@@ -283,7 +292,7 @@
 	});
 
 	function savePick(pick: DemoPick, clearWeek: number | null) {
-		if (readOnly) return;
+		if (readOnly || pastWeekLocked) return;
 		const options = clearWeek !== null ? { clearWeek } : undefined;
 		void onSavePick(activeWeek, pick, options);
 		reuseConfirm = null;
@@ -291,6 +300,7 @@
 
 	function handleSelectTeam(game: WeekGame, teamId: string) {
 		if (readOnly || !pickingEnabled || saving) return;
+		if (pastWeekLocked) return;
 		if (lockedTeamIds.has(teamId)) return;
 		if (new Date(game.kickoff_at).getTime() <= qaNow()) return;
 		const pick = buildDemoPick(game, teamId, underdogThreshold, mode === 'live');
@@ -355,7 +365,7 @@
 						<span class="status-text">Saving pick…</span>
 					{:else if readOnly}
 						<span class="status-indicator locked" aria-hidden="true"></span>
-						<span class="status-text">Browse matchups · picking is disabled in this demo</span>
+						<span class="status-text">Preview the pick selection experience--you can't make actual picks in this demo league</span>
 					{:else if pickSubmitted && currentPick}
 						<TeamLogo teamCode={currentPick.team_id} size={22} />
 						<span class="status-text">
@@ -372,7 +382,7 @@
 					{:else if pickingEnabled}
 						<span class="status-indicator needed" aria-hidden="true"></span>
 						<span class="status-text">Choose a team below</span>
-					{:else if mode === 'demo' && !weekOpen}
+					{:else if pastWeekLocked || (mode === 'demo' && !weekOpen)}
 						<span class="status-indicator locked" aria-hidden="true"></span>
 						<span class="status-text">This week is closed</span>
 					{:else}

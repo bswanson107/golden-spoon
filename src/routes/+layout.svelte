@@ -14,6 +14,7 @@
 	import QaBanner from '$lib/components/QaBanner.svelte';
 	import { hydrateQaClock } from '$lib/qaClock.svelte';
 	import { getTheme, initTheme, setTheme } from '$lib/themeStore.svelte';
+	import LeagueHeaderNav from '$lib/components/league/LeagueHeaderNav.svelte';
 	import { fetchMyLeagues, PUBLIC_DEMO_LEAGUE_ID } from '$lib/leagues';
 	import type { LeagueWithRole } from '$lib/types/league';
 	import {
@@ -31,10 +32,6 @@
 	let adminModeEnabled = $state(false);
 	let menuOpen = $state(false);
 	let menuWrap = $state<HTMLDivElement | null>(null);
-	let leagueMenuOpen = $state(false);
-	let leagueMenuWrap = $state<HTMLDivElement | null>(null);
-	/** Fallback league when not already on a league route (most recently joined). */
-	let primaryLeagueId = $state<string | null>(null);
 	let myLeagues = $state<LeagueWithRole[]>([]);
 
 	const auth: AuthStore = {
@@ -71,51 +68,41 @@
 	const seasonLabel = $derived(getSeasonIndicatorLabel());
 	const seasonTooltip = $derived(getSeasonIndicatorTooltip());
 
+	const routeId = $derived($page.route.id ?? '');
 	const routeLeagueId = $derived.by(() => {
-		const routeId = $page.route.id ?? '';
 		const id = $page.params.id;
 		if (routeId.startsWith('/league/[id]') && id) return id;
 		return null;
 	});
 
-	const navLeagueId = $derived.by(() => {
-		// Prefer a real (non-demo) league for header League / My Picks links.
-		if (routeLeagueId && routeLeagueId !== PUBLIC_DEMO_LEAGUE_ID) {
-			return routeLeagueId;
-		}
-		return primaryLeagueId ?? routeLeagueId;
-	});
-
-	/** Real leagues only — demo never counts toward the switcher. */
+	/** Real leagues only — demo never appears in the header switcher. */
 	const playableLeagues = $derived(myLeagues.filter((league) => !league.is_public_demo));
 
+	const overviewActive = $derived(routeId === '/league/[id]');
+	const pickActive = $derived(routeId === '/league/[id]/pick');
+
+	const showLeagueNav = $derived(
+		auth.user !== null &&
+			(overviewActive || pickActive) &&
+			routeLeagueId !== null &&
+			routeLeagueId !== PUBLIC_DEMO_LEAGUE_ID
+	);
+
+	const showDemoExit = $derived(
+		auth.user !== null && routeLeagueId === PUBLIC_DEMO_LEAGUE_ID
+	);
+
 	const navLeague = $derived.by(() => {
-		const id = navLeagueId;
-		if (!id) return null;
-		return (
-			playableLeagues.find((league) => league.id === id) ??
-			myLeagues.find((league) => league.id === id) ??
-			null
-		);
+		if (!routeLeagueId) return null;
+		return playableLeagues.find((league) => league.id === routeLeagueId) ?? null;
 	});
 
-	const leagueNavLabel = $derived(navLeague?.name ?? 'League');
-
-	const otherLeagues = $derived(
-		playableLeagues.filter((league) => league.id !== navLeagueId)
-	);
-
-	const showLeagueSwitcher = $derived(playableLeagues.length > 1);
-
-	const standingsHref = $derived(
-		navLeagueId ? `${base}/league/${navLeagueId}` : `${base}/leagues`
+	const overviewHref = $derived(
+		routeLeagueId ? `${base}/league/${routeLeagueId}` : `${base}/leagues`
 	);
 	const pickHref = $derived(
-		navLeagueId ? `${base}/league/${navLeagueId}/pick` : `${base}/leagues`
+		routeLeagueId ? `${base}/league/${routeLeagueId}/pick` : `${base}/leagues`
 	);
-
-	const standingsActive = $derived(($page.route.id ?? '') === '/league/[id]');
-	const pickActive = $derived(($page.route.id ?? '') === '/league/[id]/pick');
 
 	const theme = $derived(getTheme());
 
@@ -140,10 +127,7 @@
 		});
 
 		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') {
-				menuOpen = false;
-				leagueMenuOpen = false;
-			}
+			if (event.key === 'Escape') menuOpen = false;
 		};
 
 		window.addEventListener('keydown', onKeyDown);
@@ -154,26 +138,38 @@
 		};
 	});
 
+	function refreshMyLeagues(userId: string) {
+		void fetchMyLeagues(userId).then((result) => {
+			myLeagues = result.leagues;
+		});
+	}
+
 	$effect(() => {
 		const user = auth.user;
 		if (auth.loading || !user) {
-			primaryLeagueId = null;
 			myLeagues = [];
-			leagueMenuOpen = false;
 			return;
 		}
 
-		fetchMyLeagues(user.id).then((result) => {
-			myLeagues = result.leagues;
-			const nonDemo = result.leagues.find((league) => !league.is_public_demo);
-			primaryLeagueId = nonDemo?.id ?? result.leagues[0]?.id ?? null;
-		});
+		refreshMyLeagues(user.id);
 	});
 
 	afterNavigate(({ to }) => {
-		const routeId = to?.route.id ?? '';
-		if (!routeId.startsWith('/league/[id]')) {
+		const nextRouteId = to?.route.id ?? '';
+		if (!nextRouteId.startsWith('/league/[id]')) {
 			setLiveSeasonIndicator(2026);
+		}
+
+		const user = auth.user;
+		const id = to?.params?.id;
+		if (
+			user &&
+			id &&
+			id !== PUBLIC_DEMO_LEAGUE_ID &&
+			nextRouteId.startsWith('/league/[id]') &&
+			!myLeagues.some((league) => league.id === id)
+		) {
+			refreshMyLeagues(user.id);
 		}
 	});
 
@@ -193,17 +189,7 @@
 	}
 
 	function toggleMenu() {
-		leagueMenuOpen = false;
 		menuOpen = !menuOpen;
-	}
-
-	function closeLeagueMenu() {
-		leagueMenuOpen = false;
-	}
-
-	function toggleLeagueMenu() {
-		menuOpen = false;
-		leagueMenuOpen = !leagueMenuOpen;
 	}
 
 	$effect(() => {
@@ -226,32 +212,6 @@
 		};
 	});
 
-	$effect(() => {
-		if (!leagueMenuOpen) return;
-
-		const onPointerDown = (event: PointerEvent) => {
-			const target = event.target;
-			if (!(target instanceof Node) || !leagueMenuWrap?.contains(target)) {
-				leagueMenuOpen = false;
-			}
-		};
-
-		const timer = window.setTimeout(() => {
-			document.addEventListener('pointerdown', onPointerDown);
-		}, 0);
-
-		return () => {
-			window.clearTimeout(timer);
-			document.removeEventListener('pointerdown', onPointerDown);
-		};
-	});
-
-	$effect(() => {
-		// Close switcher when navigating between leagues.
-		void $page.url.pathname;
-		leagueMenuOpen = false;
-	});
-
 	async function signOut() {
 		closeMenu();
 		signingOut = true;
@@ -265,7 +225,7 @@
 	<link rel="icon" href={spoonFavicon} type="image/png" />
 </svelte:head>
 
-<div class="app">
+<div class="app" class:has-league-nav={showLeagueNav}>
 	<QaBanner />
 	<header class="header chrome-bar">
 		<div class="header-inner">
@@ -284,74 +244,18 @@
 			{/if}
 		</div>
 
-		{#if auth.user}
-			<nav class="header-nav" aria-label="Primary">
-				{#if showLeagueSwitcher}
-					<div class="league-switcher" bind:this={leagueMenuWrap}>
-						<a
-							href={standingsHref}
-							class="nav-text league-nav-link"
-							class:active={standingsActive}
-							aria-current={standingsActive ? 'page' : undefined}
-							title={leagueNavLabel}
-						>
-							<span class="league-nav-label">{leagueNavLabel}</span>
-						</a>
-						<button
-							type="button"
-							class="league-switcher-toggle"
-							class:active={standingsActive || leagueMenuOpen}
-							aria-label="Switch league"
-							aria-expanded={leagueMenuOpen}
-							aria-haspopup="listbox"
-							onclick={toggleLeagueMenu}
-						>
-							<svg class="league-chevron" viewBox="0 0 16 16" aria-hidden="true">
-								<path
-									fill="none"
-									stroke="currentColor"
-									stroke-width="1.75"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M4 6l4 4 4-4"
-								/>
-							</svg>
-						</button>
-						{#if leagueMenuOpen}
-							<ul class="league-menu" role="listbox" aria-label="Your leagues">
-								{#each otherLeagues as league (league.id)}
-									<li role="option">
-										<a
-											href="{base}/league/{league.id}"
-											class="league-menu-link"
-											onclick={closeLeagueMenu}
-										>
-											{league.name}
-										</a>
-									</li>
-								{/each}
-							</ul>
-						{/if}
-					</div>
-				{:else}
-					<a
-						href={standingsHref}
-						class="nav-text league-nav-link"
-						class:active={standingsActive}
-						aria-current={standingsActive ? 'page' : undefined}
-						title={leagueNavLabel}
-					>
-						<span class="league-nav-label">{leagueNavLabel}</span>
-					</a>
-				{/if}
-				<a
-					href={pickHref}
-					class="nav-text"
-					class:active={pickActive}
-					aria-current={pickActive ? 'page' : undefined}
-				>
-					My Picks
-				</a>
+		{#if showLeagueNav}
+			<LeagueHeaderNav
+				leagues={playableLeagues}
+				currentLeague={navLeague}
+				{overviewHref}
+				picksHref={pickHref}
+				{overviewActive}
+				picksActive={pickActive}
+			/>
+		{:else if showDemoExit}
+			<nav class="demo-exit-nav" aria-label="Demo">
+				<a href="{base}/leagues" class="btn btn-ghost btn-sm">Exit Demo</a>
 			</nav>
 		{/if}
 
@@ -548,6 +452,10 @@
 		--app-header-height: 3.75rem;
 	}
 
+	.app.has-league-nav {
+		--app-header-height: 5.05rem;
+	}
+
 	.header {
 		position: sticky;
 		top: 0;
@@ -567,6 +475,11 @@
 		padding: 0.55rem var(--app-content-gutter, 1rem);
 		box-sizing: border-box;
 		overflow: visible;
+	}
+
+	.app.has-league-nav .header-inner {
+		padding-top: 0.35rem;
+		padding-bottom: 0.35rem;
 	}
 
 	.brand-block {
@@ -662,156 +575,12 @@
 		visibility: visible;
 	}
 
-	.header-nav {
-		position: relative;
+	.demo-exit-nav {
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		flex: 1 1 auto;
 		min-width: 0;
-		gap: 0.45rem;
-	}
-
-	.league-switcher {
-		position: relative;
-		display: inline-flex;
-		align-items: stretch;
-		min-width: 0;
-		max-width: 100%;
-	}
-
-	.league-nav-link {
-		max-width: 100%;
-		min-width: 0;
-	}
-
-	.league-switcher .league-nav-link {
-		border-top-right-radius: 0;
-		border-bottom-right-radius: 0;
-		padding-right: 0.45rem;
-	}
-
-	.league-nav-label {
-		display: block;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		max-width: min(18rem, calc(100vw - 11rem));
-	}
-
-	.league-switcher-toggle {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		margin: 0;
-		padding: 0.4rem 0.45rem 0.4rem 0.2rem;
-		border: none;
-		border-radius: 0 var(--radius) var(--radius) 0;
-		background: transparent;
-		color: var(--text-muted);
-		cursor: pointer;
-		transition:
-			color 0.15s ease,
-			background 0.15s ease;
-	}
-
-	.league-switcher-toggle:hover,
-	.league-nav-link:hover + .league-switcher-toggle {
-		color: var(--text);
-	}
-
-	.league-switcher-toggle.active {
-		color: var(--brand-text);
-		background: color-mix(in srgb, var(--brand) 55%, transparent);
-	}
-
-	:global([data-theme='light']) .league-switcher-toggle.active {
-		color: var(--text);
-		background: color-mix(in srgb, var(--brand) 45%, transparent);
-	}
-
-	.league-switcher:has(.league-nav-link.active) .league-switcher-toggle {
-		color: var(--brand-text);
-		background: color-mix(in srgb, var(--brand) 55%, transparent);
-	}
-
-	:global([data-theme='light']) .league-switcher:has(.league-nav-link.active) .league-switcher-toggle {
-		color: var(--text);
-		background: color-mix(in srgb, var(--brand) 45%, transparent);
-	}
-
-	.league-chevron {
-		width: 0.85rem;
-		height: 0.85rem;
-		display: block;
-	}
-
-	.league-menu {
-		position: absolute;
-		top: calc(100% + 0.35rem);
-		left: 50%;
-		transform: translateX(-50%);
-		z-index: 60;
-		min-width: max(100%, 10rem);
-		max-width: min(16rem, calc(100vw - 1.5rem));
-		margin: 0;
-		padding: 0.35rem;
-		list-style: none;
-		border-radius: var(--radius);
-		background: var(--surface);
-		box-shadow: var(--shadow);
-		border: 1px solid var(--border);
-	}
-
-	.league-menu-link {
-		display: block;
-		padding: 0.5rem 0.65rem;
-		border-radius: calc(var(--radius) - 1px);
-		color: var(--text);
-		font-size: 0.85rem;
-		font-weight: 600;
-		text-decoration: none;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.league-menu-link:hover {
-		background: color-mix(in srgb, var(--text) 8%, var(--surface));
-		color: var(--text);
-	}
-
-	.nav-text {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0.4rem 0.85rem;
-		border: none;
-		border-radius: var(--radius);
-		background: transparent;
-		color: var(--text-muted);
-		font-family: var(--font-body);
-		font-size: 0.88rem;
-		font-weight: 600;
-		text-decoration: none;
-		letter-spacing: 0.01em;
-		transition:
-			color 0.15s ease,
-			background 0.15s ease;
-	}
-
-	.nav-text:hover {
-		color: var(--text);
-	}
-
-	.nav-text.active {
-		color: var(--brand-text);
-		background: color-mix(in srgb, var(--brand) 55%, transparent);
-	}
-
-	:global([data-theme='light']) .nav-text.active {
-		color: var(--text);
-		background: color-mix(in srgb, var(--brand) 45%, transparent);
 	}
 
 	.header-actions {
@@ -1028,23 +797,6 @@
 	@media (max-width: 420px) {
 		.header-inner {
 			gap: 0.25rem;
-		}
-
-		.header-nav {
-			gap: 0.3rem;
-		}
-
-		.nav-text {
-			padding: 0.35rem 0.5rem;
-			font-size: 0.82rem;
-		}
-
-		.league-nav-label {
-			max-width: min(12rem, calc(100vw - 9.5rem));
-		}
-
-		.league-switcher-toggle {
-			padding: 0.35rem 0.35rem 0.35rem 0.15rem;
 		}
 
 		.season-indicator {

@@ -64,10 +64,25 @@ export const WEEK3 = {
 
 export function getCurrentWeekFromDate(now: Date = new Date(), seasonYear = SEASON_YEAR): number {
 	if (seasonYear !== 2026) return 1;
-	const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-	const elapsed = now.getTime() - SEASON_2026_WEEK1_START.getTime();
-	if (elapsed < 0) return 1;
-	const week = Math.floor(elapsed / msPerWeek) + 1;
+	// Mirror src/lib/season.ts: week N+1 starts Tuesday 00:00 ET.
+	const week1TuesdayMs = Date.parse('2026-09-08T00:00:00-04:00');
+	if (now.getTime() < week1TuesdayMs) return 1;
+	const et = new Intl.DateTimeFormat('en-US', {
+		timeZone: 'America/New_York',
+		year: 'numeric',
+		month: 'numeric',
+		day: 'numeric',
+		hourCycle: 'h23'
+	}).formatToParts(now);
+	const year = Number(et.find((p) => p.type === 'year')?.value ?? 2026);
+	const month = Number(et.find((p) => p.type === 'month')?.value ?? 9);
+	const day = Number(et.find((p) => p.type === 'day')?.value ?? 8);
+	const todayEt = new Date(
+		`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00-04:00`
+	);
+	// DST-safe enough for the 2026 E2E window (all EDT).
+	const days = Math.round((todayEt.getTime() - week1TuesdayMs) / 86_400_000);
+	const week = Math.floor(days / 7) + 1;
 	return Math.min(Math.max(week, 1), 18);
 }
 

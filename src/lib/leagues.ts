@@ -171,11 +171,12 @@ export async function fetchMyLeagues(userId: string): Promise<{
 	return { leagues: merged, error: null };
 }
 
-/** After sign-in: land on the sole league, or the league list when there are zero or many. */
+/** After sign-in: land on the sole real league, or the list when there are zero or many. Public demo does not count. */
 export async function getPostAuthPath(userId: string, basePath: string): Promise<string> {
 	const { leagues } = await fetchMyLeagues(userId);
-	if (leagues.length === 1) {
-		return `${basePath}/league/${leagues[0].id}`;
+	const playable = leagues.filter((league) => !league.is_public_demo);
+	if (playable.length === 1) {
+		return `${basePath}/league/${playable[0].id}`;
 	}
 	return `${basePath}/leagues`;
 }

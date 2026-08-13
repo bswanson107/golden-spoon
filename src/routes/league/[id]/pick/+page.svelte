@@ -7,12 +7,14 @@
 	import DemoBanner from '$lib/components/pick/DemoBanner.svelte';
 	import PickWeekPanel from '$lib/components/pick/PickWeekPanel.svelte';
 	import SeasonLongPicksModal from '$lib/components/pick/SeasonLongPicksModal.svelte';
-	import { hasDemoPicks, loadDemoState, resetDemoPicks, saveDemoState } from '$lib/demo';
+	import { hasDemoPicks, loadDemoState, regularSeasonWeek, resetDemoPicks, saveDemoState } from '$lib/demo';
+	import { fetchSeasonWeekCompletion, resolveCurrentWeek } from '$lib/games';
 	import { fetchLeague } from '$lib/leagues';
 	import { normalizeUnderdogThreshold } from '$lib/leagueRules';
 	import { loadViewWeek, saveViewWeek } from '$lib/pickView';
 	import { fetchUserLeaguePicks, picksByWeek, saveLeaguePick, type UserLeaguePick } from '$lib/picks';
 	import { isDemoSeason } from '$lib/season';
+	import { isQaClockEnabled, qaNowDate, qaSimulatedNowMs } from '$lib/qaClock.svelte';
 	import { syncSeasonIndicatorForLeague } from '$lib/seasonIndicatorStore.svelte';
 	import type { DemoPick, DemoState } from '$lib/types/demo';
 	import type { LeagueWithRole } from '$lib/types/league';
@@ -37,6 +39,7 @@
 	let error = $state<string | null>(null);
 	let saveError = $state<string | null>(null);
 	let seasonPicksOpen = $state(false);
+	let currentWeek = $state(1);
 
 	function setViewMode(mode: ViewMode) {
 		viewMode = mode;
@@ -92,6 +95,8 @@
 	$effect(() => {
 		const leagueData = league;
 		if (!leagueData) return;
+		void qaSimulatedNowMs();
+		void isQaClockEnabled();
 
 		if (isDemo) {
 			syncSeasonIndicatorForLeague(leagueData.season_year, demoState.simulatedWeek);
@@ -124,9 +129,16 @@
 				viewWeek = demoState.simulatedWeek;
 				userPicks = [];
 			} else {
-				const loadedViewWeek = loadViewWeek(id, user.id, result.league.season_year);
-				viewWeek = loadedViewWeek;
-				demoState = loadDemoState(id, user.id, result.league.season_year);
+				const seasonYear = result.league.season_year;
+				const completion = await fetchSeasonWeekCompletion(seasonYear);
+				const liveWeek = completion.error
+					? loadViewWeek(id, user.id, seasonYear)
+					: resolveCurrentWeek(completion.weeks, qaNowDate(), seasonYear);
+				currentWeek = liveWeek;
+				const loadedViewWeek = loadViewWeek(id, user.id, seasonYear);
+				viewWeek = Math.max(loadedViewWeek, liveWeek);
+				saveViewWeek(id, user.id, viewWeek);
+				demoState = loadDemoState(id, user.id, seasonYear);
 				const picksResult = await fetchUserLeaguePicks(id, user.id);
 				if (picksResult.error) {
 					error = picksResult.error;
@@ -279,6 +291,7 @@
 				{saving}
 				{viewMode}
 				readOnly={isPublicDemo}
+				currentWeek={isDemo ? null : currentWeek}
 				onSavePick={isDemo ? handleSaveDemoPick : handleSaveLivePick}
 				onOpenSeasonOutlook={isPublicDemo ? undefined : () => (seasonPicksOpen = true)}
 			/>
@@ -296,7 +309,7 @@
 
 		<LeagueFooter
 			bind:league
-			weekNumber={isDemo ? demoState.simulatedWeek : viewWeek}
+			weekNumber={isDemo ? regularSeasonWeek(demoState.simulatedWeek) : viewWeek}
 		/>
 	{/if}
 </main>
