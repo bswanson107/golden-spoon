@@ -76,7 +76,7 @@ test('after MNF kickoff, week is closed', async ({ adminPage }) => {
 	}
 
 	await openLeague(adminPage, league.id);
-	await expect(adminPage.getByText(/pick window has closed|You're locked in on/i)).toBeVisible();
+	await expect(adminPage.getByText(/pick window has closed|You're locked in on|Your pick/i)).toBeVisible();
 	if (adminId) {
 		await expectGridCell(adminPage, adminId, 1, { state: 'visible' });
 	}

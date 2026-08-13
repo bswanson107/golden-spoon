@@ -2,9 +2,11 @@
 	import TeamLogo from '$lib/components/TeamLogo.svelte';
 	import GameKickoffInfo from '$lib/components/pick/GameKickoffInfo.svelte';
 	import { getTeamName } from '$lib/data/nflTeams';
-	import { isUnderdog, formatWinPct } from '$lib/demo';
+	import { isUnderdog, formatWinPct, outcomeLabel } from '$lib/demo';
+	import { formatFinalScore } from '$lib/games';
 	import { qaNow } from '$lib/qaClock.svelte';
 	import type { WeekGame } from '$lib/types/game';
+	import type { PickOutcome } from '$lib/types/standings';
 
 	let {
 		games,
@@ -15,6 +17,7 @@
 		activeWeek = 1,
 		pickingEnabled = true,
 		underdogThreshold = 33,
+		pickOutcome = null,
 		onSelectTeam
 	}: {
 		games: WeekGame[];
@@ -25,6 +28,7 @@
 		activeWeek?: number;
 		pickingEnabled?: boolean;
 		underdogThreshold?: number;
+		pickOutcome?: PickOutcome | null;
 		onSelectTeam?: (game: WeekGame, teamId: string) => void;
 	} = $props();
 
@@ -70,7 +74,22 @@
 	}
 
 	function yourPickTooltip(): string {
+		if (pickOutcome && pickOutcome !== 'pending') {
+			return `Your Week ${activeWeek} pick — ${outcomeLabel(pickOutcome)}.`;
+		}
 		return `This is your Week ${activeWeek} pick. You can change it until kickoff.`;
+	}
+
+	function pickMarkerText(): string {
+		if (pickOutcome && pickOutcome !== 'pending') return outcomeLabel(pickOutcome);
+		return 'Your pick';
+	}
+
+	function pickMarkerClass(): string {
+		if (pickOutcome === 'win') return 'badge-pick-win';
+		if (pickOutcome === 'loss' || pickOutcome === 'missed') return 'badge-pick-loss';
+		if (pickOutcome === 'tie') return 'badge-pick-tie';
+		return 'badge-pick';
 	}
 
 	const underdawgTooltip =
@@ -92,6 +111,11 @@
 		<tbody>
 			{#each games as game, gi (game.id)}
 				{@const isSubmitted = isSubmittedPickGameId === game.id}
+				{@const finalScore = formatFinalScore(
+					game,
+					game.away.abbreviation,
+					game.home.abbreviation
+				)}
 				{@const teams = [
 					{ team: game.away, side: 'Away', winPct: game.away_win_pct },
 					{ team: game.home, side: 'Home', winPct: game.home_win_pct }
@@ -143,11 +167,11 @@
 										<span class="badges">
 											{#if isSelected}
 												<span
-													class="badge badge-pick"
+													class="badge {isSubmitted ? pickMarkerClass() : 'badge-pick'}"
 													data-tooltip={yourPickTooltip()}
 													title={yourPickTooltip()}
 													tabindex="0"
-												>Your pick</span>
+												>{isSubmitted ? pickMarkerText() : 'Your pick'}</span>
 											{:else if usedWk !== undefined}
 												<span
 													class="badge badge-used"
@@ -173,6 +197,9 @@
 						{#if ti === 0}
 							<td class="col-kickoff" rowspan="2">
 								<GameKickoffInfo kickoffAt={game.kickoff_at} layout="stack" align="end" />
+								{#if finalScore}
+									<p class="final-score">{finalScore}</p>
+								{/if}
 							</td>
 						{/if}
 					</tr>
@@ -319,7 +346,7 @@
 	}
 
 	.col-kickoff {
-		width: 5.75rem;
+		width: 6.75rem;
 		text-align: right;
 		white-space: normal;
 		vertical-align: middle;
@@ -452,6 +479,30 @@
 		color: var(--win-text);
 	}
 
+	.badge-pick-win {
+		background: var(--win-bg);
+		color: var(--win-text);
+	}
+
+	.badge-pick-loss {
+		background: var(--loss-bg);
+		color: var(--loss-text);
+	}
+
+	.badge-pick-tie {
+		background: var(--tie-bg);
+		color: var(--tie-text);
+	}
+
+	.final-score {
+		margin: 0.35rem 0 0;
+		font-size: 0.68rem;
+		font-weight: 700;
+		color: var(--text);
+		line-height: 1.3;
+		white-space: nowrap;
+	}
+
 	.badge-used {
 		background: var(--tie-bg);
 		color: var(--tie-text);
@@ -470,7 +521,7 @@
 	/* Desktop: single-row team layout */
 	@media (min-width: 640px) {
 		.col-kickoff {
-			width: 7rem;
+			width: 8.25rem;
 		}
 
 		.pick-block {

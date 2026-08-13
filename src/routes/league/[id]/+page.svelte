@@ -25,6 +25,7 @@
 		getNextUpcomingKickoff,
 		getPickCtaState
 	} from '$lib/leaguePickStatus';
+	import { subscribeLiveRefresh } from '$lib/liveRefresh';
 	import {
 		adminDeleteLeague,
 		adminKickLeagueMember,
@@ -36,12 +37,14 @@
 	} from '$lib/leagueRules';
 	import {
 		isQaClockEnabled,
+		qaNow,
 		qaNowDate,
 		qaSimulatedNowMs
 	} from '$lib/qaClock.svelte';
 	import { getCurrentWeekFromDate, isDemoSeason, REGULAR_SEASON_WEEKS } from '$lib/season';
 	import { syncSeasonIndicatorForLeague } from '$lib/seasonIndicatorStore.svelte';
 	import { fetchLeaguePicks, fetchLeaguePickSubmissions, fetchLeagueStandings, type PickSubmissionsByCell } from '$lib/standings';
+	import { requestGameSync } from '$lib/syncGames';
 	import type { DemoState } from '$lib/types/demo';
 	import type { WeekGame } from '$lib/types/game';
 	import type { LeagueWithRole } from '$lib/types/league';
@@ -144,6 +147,7 @@
 		// Recompute when the QA clock moves (same pattern as the picks grid).
 		void qaSimulatedNowMs();
 		void isQaClockEnabled();
+		void qaNow();
 		return getPickCtaState(viewWeek, liveWeekGames, userCurrentWeekPick);
 	});
 
@@ -284,6 +288,26 @@
 
 		if (!submissionsResult.error) {
 			pickSubmissions = submissionsResult.byCell;
+		}
+
+		const leagueData = league;
+		if (!leagueData || isDemoSeason(leagueData.season_year)) return;
+
+		void requestGameSync();
+		const [gamesResult, completion] = await Promise.all([
+			fetchWeekGames(leagueData.season_year, viewWeek),
+			fetchSeasonWeekCompletion(leagueData.season_year)
+		]);
+		liveWeekGames = gamesResult.games;
+
+		const liveWeek = completion.error
+			? getCurrentWeekFromDate(qaNowDate(), leagueData.season_year)
+			: resolveCurrentWeek(completion.weeks, qaNowDate(), leagueData.season_year);
+		gridMaxWeek = liveWeek;
+		if (liveWeek !== viewWeek) {
+			viewWeek = liveWeek;
+			const nextGames = await fetchWeekGames(leagueData.season_year, liveWeek);
+			liveWeekGames = nextGames.games;
 		}
 	}
 
@@ -484,15 +508,13 @@
 
 	$effect(() => {
 		if (typeof document === 'undefined') return;
-		const onVisible = () => {
-			if (document.visibilityState !== 'visible') return;
+		const leagueData = league;
+		if (!leagueData || isDemoSeason(leagueData.season_year)) return;
+
+		return subscribeLiveRefresh(() => {
 			gridRefreshToken += 1;
-			if (league && !isDemoSeason(league.season_year)) {
-				void reloadLeagueData();
-			}
-		};
-		document.addEventListener('visibilitychange', onVisible);
-		return () => document.removeEventListener('visibilitychange', onVisible);
+			void reloadLeagueData();
+		});
 	});
 
 </script>

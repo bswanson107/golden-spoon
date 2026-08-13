@@ -79,21 +79,24 @@ export function getPickCtaState(
 		return { kind: 'hidden' };
 	}
 
-	// Once the week's last kickoff has passed, the window is closed for everyone
-	// (with or without a pick).
-	if (hasWeekClosed(games, now)) {
-		return { kind: 'closed', week: weekNumber };
-	}
+	const hasRealPick = userPick !== undefined && !userPick.is_missed;
+	const weekClosed = hasWeekClosed(games, now);
 
-	if (userPick) {
+	// Keep the "Your pick" hero after the last kickoff when the member already
+	// submitted. Closed copy is only for missed / no pick.
+	if (hasRealPick && userPick) {
 		const kickedOff = new Date(userPick.kickoff_at).getTime() <= now;
 
 		return {
 			kind: 'submitted',
 			week: weekNumber,
-			changeable: !kickedOff,
+			changeable: !kickedOff && !weekClosed,
 			teamAbbreviation: kickedOff ? userPick.team_abbreviation : undefined
 		};
+	}
+
+	if (weekClosed) {
+		return { kind: 'closed', week: weekNumber };
 	}
 
 	const nextKickoff = getNextUpcomingKickoff(games, now);

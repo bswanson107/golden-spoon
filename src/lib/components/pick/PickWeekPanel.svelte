@@ -40,7 +40,8 @@
 		onOpenSeasonOutlook,
 		viewMode = 'card',
 		readOnly = false,
-		currentWeek = null
+		currentWeek = null,
+		gamesRefreshToken = 0
 	}: {
 		mode: 'demo' | 'live';
 		seasonYear: number;
@@ -61,6 +62,8 @@
 		readOnly?: boolean;
 		/** Live current NFL week; weeks before this cannot be picked. */
 		currentWeek?: number | null;
+		/** Bump to silently refetch games/scores without a full loading flash. */
+		gamesRefreshToken?: number;
 	} = $props();
 
 	let games = $state<WeekGame[]>([]);
@@ -70,6 +73,7 @@
 	let reuseConfirm = $state<{ pick: DemoPick; clearWeek: number } | null>(null);
 	let lastSyncAt = $state<string | null>(null);
 	let syncNotice = $state<string | null>(null);
+	let loadedWeek = $state<number | null>(null);
 
 	const activeWeek = $derived(regularSeasonWeek(viewWeek));
 
@@ -189,6 +193,12 @@
 		return livePickToScored(liveCurrentPick, game);
 	});
 
+	const stickyOutcome = $derived.by(() => {
+		if (currentScored && currentScored.outcome !== 'pending') return currentScored.outcome;
+		if (liveCurrentPick && liveCurrentPick.outcome !== 'pending') return liveCurrentPick.outcome;
+		return null;
+	});
+
 	function livePickToDemo(pick: UserLeaguePick | null | undefined): DemoPick | null {
 		if (!pick) return null;
 		return {
@@ -256,13 +266,18 @@
 			priorWeekGames = [];
 			loading = false;
 			error = null;
+			loadedWeek = null;
 			return;
 		}
 
 		const week = activeWeek;
 		const prevWeek = priorWeek;
 		const hasPriorPick = priorPick !== null;
-		loading = true;
+		void gamesRefreshToken;
+		const silent = loadedWeek === week;
+		if (!silent) {
+			loading = true;
+		}
 		error = null;
 		syncNotice = null;
 
@@ -287,6 +302,7 @@
 			}
 
 			await loadWeekGames(week, prevWeek, hasPriorPick);
+			loadedWeek = week;
 			loading = false;
 		})();
 	});
@@ -376,8 +392,10 @@
 							{/if}
 							<span class="status-meta">({formatWinPct(currentPick.win_pct_at_pick)})</span>
 						</span>
-						{#if mode === 'live' && !canChangeLivePick}
-							<span class="status-tag">Final</span>
+						{#if stickyOutcome}
+							<span class="status-tag tag-{stickyOutcome}">{outcomeLabel(stickyOutcome)}</span>
+						{:else if mode === 'live' && !canChangeLivePick}
+							<span class="status-tag">Locked</span>
 						{/if}
 					{:else if pickingEnabled}
 						<span class="status-indicator needed" aria-hidden="true"></span>
@@ -463,6 +481,7 @@
 				{games}
 				selectedTeamId={displayTeamId}
 				isSubmittedPickGameId={pickSubmitted && currentPick?.game_id ? currentPick.game_id : null}
+				pickOutcome={stickyOutcome}
 				teamUsageByWeek={usageMap}
 				{lockedTeamIds}
 				{activeWeek}
@@ -477,11 +496,11 @@
 						{game}
 						selectedTeamId={displayTeamId}
 						isSubmittedPick={pickSubmitted && currentPick?.game_id === game.id}
+						pickOutcome={pickSubmitted && currentPick?.game_id === game.id ? stickyOutcome : null}
 						teamUsageByWeek={usageMap}
 						{lockedTeamIds}
 						{activeWeek}
 						{pickingEnabled}
-						{showResults}
 						{underdogThreshold}
 						onSelectTeam={(teamId) => handleSelectTeam(game, teamId)}
 					/>
@@ -704,6 +723,22 @@
 		background: var(--surface-2);
 		border: none;
 		box-shadow: var(--shadow-sm);
+	}
+
+	.status-tag.tag-win {
+		color: var(--win-text);
+		background: var(--win-bg);
+	}
+
+	.status-tag.tag-loss,
+	.status-tag.tag-missed {
+		color: var(--loss-text);
+		background: var(--loss-bg);
+	}
+
+	.status-tag.tag-tie {
+		color: var(--tie-text);
+		background: var(--tie-bg);
 	}
 
 	.pick-scroll-content {

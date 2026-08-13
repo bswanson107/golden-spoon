@@ -160,6 +160,17 @@ export function maxVisibleWeek(weeks: WeekCompletion[]): number {
 	return Math.min(week, REGULAR_SEASON_WEEKS);
 }
 
+/** Compact final score, or null if the game is not complete with scores. */
+export function formatFinalScore(
+	game: WeekGame,
+	awayName: string,
+	homeName: string
+): string | null {
+	if (game.status !== 'final') return null;
+	if (game.home_score === null || game.away_score === null) return null;
+	return `${awayName} ${game.away_score} – ${game.home_score} ${homeName}`;
+}
+
 /**
  * Live current week: MNF final (or cancelled) for week N starts week N+1 immediately,
  * otherwise week N+1 starts at Tuesday 00:00 ET — whichever happens first.

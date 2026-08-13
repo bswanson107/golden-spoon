@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getMissingPickers, hasWeekClosed } from '$lib/leaguePickStatus';
+	import { qaNow } from '$lib/qaClock.svelte';
 	import type { WeekGame } from '$lib/types/game';
 	import type { LeaguePick, StandingRow } from '$lib/types/standings';
 
@@ -18,7 +19,7 @@
 	let copied = $state(false);
 
 	const missing = $derived(getMissingPickers(standings, picks, weekNumber));
-	const weekClosed = $derived(hasWeekClosed(games));
+	const weekClosed = $derived(hasWeekClosed(games, qaNow()));
 
 	async function copyNames() {
 		const text = missing.map((m) => m.display_name).join('\n');

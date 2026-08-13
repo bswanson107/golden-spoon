@@ -4,6 +4,7 @@
 	import WinPctBar from '$lib/components/pick/WinPctBar.svelte';
 	import TeamLogo from '$lib/components/TeamLogo.svelte';
 	import { formatPoints, outcomeLabel } from '$lib/demo';
+	import { formatFinalScore } from '$lib/games';
 	import PickKickoffCountdown from '$lib/components/league/PickKickoffCountdown.svelte';
 	import type { PickCtaState } from '$lib/leaguePickStatus';
 	import type { WeekGame } from '$lib/types/game';
@@ -52,6 +53,11 @@
 			default:
 				return 'outcome-pending';
 		}
+	});
+
+	const finalScore = $derived.by(() => {
+		if (!game) return null;
+		return formatFinalScore(game, game.away.abbreviation, game.home.abbreviation);
 	});
 </script>
 
@@ -117,6 +123,9 @@
 		{#if game}
 			<div class="pick-details">
 				<GameKickoffInfo kickoffAt={game.kickoff_at} layout="inline" />
+				{#if finalScore}
+					<p class="pick-score">{finalScore}</p>
+				{/if}
 				<WinPctBar
 					awayTeamCode={game.away.id}
 					homeTeamCode={game.home.id}
@@ -332,6 +341,14 @@
 		gap: 0.75rem;
 		padding-top: 0.25rem;
 		border-top: 1px solid var(--border);
+	}
+
+	.pick-score {
+		margin: 0;
+		font-size: 0.9rem;
+		font-weight: 700;
+		text-align: center;
+		color: var(--text);
 	}
 
 	.dashboard-closed {

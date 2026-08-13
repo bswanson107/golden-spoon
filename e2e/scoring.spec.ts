@@ -140,5 +140,5 @@ test('tie awards 0.5 to underdog and favorite', async ({ adminPage, playerPage }
 	await expect(adminPage.locator(`[data-testid="pick-cell"][data-user="${adminId}"] .underdawg`)).toHaveCount(0);
 
 	const adminRow = adminPage.locator(`[data-testid="standings-row"][data-user="${adminId}"]`);
-	await expect(adminRow.locator('td.num').nth(2)).toHaveText('0-0-1');
+	await expect(adminRow.locator('[data-testid="standings-record"]')).toHaveText('0-0-1');
 });

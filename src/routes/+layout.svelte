@@ -12,7 +12,8 @@
 	import { getSupabase } from '$lib/supabase';
 	import { isAppAdmin, loadAdminMode, saveAdminMode } from '$lib/admin';
 	import QaBanner from '$lib/components/QaBanner.svelte';
-	import { hydrateQaClock } from '$lib/qaClock.svelte';
+	import { startLiveRefresh } from '$lib/liveRefresh';
+	import { hydrateQaClock, startQaClockTicker } from '$lib/qaClock.svelte';
 	import { getTheme, initTheme, setTheme } from '$lib/themeStore.svelte';
 	import LeagueHeaderNav from '$lib/components/league/LeagueHeaderNav.svelte';
 	import { fetchMyLeagues, PUBLIC_DEMO_LEAGUE_ID } from '$lib/leagues';
@@ -131,10 +132,14 @@
 		};
 
 		window.addEventListener('keydown', onKeyDown);
+		const stopClockTicker = startQaClockTicker();
+		const stopLiveRefresh = startLiveRefresh();
 
 		return () => {
 			subscription.unsubscribe();
 			window.removeEventListener('keydown', onKeyDown);
+			stopClockTicker();
+			stopLiveRefresh();
 		};
 	});
 

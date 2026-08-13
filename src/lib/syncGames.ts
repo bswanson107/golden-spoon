@@ -1,3 +1,4 @@
+import { isQaClockEnabled } from '$lib/qaClock.svelte';
 import { getSupabase } from '$lib/supabase';
 import type { SyncResult } from '$lib/sync/types';
 
@@ -15,6 +16,12 @@ const EMPTY_RESULT: SyncResult = {
 };
 
 export async function requestGameSync(): Promise<SyncResult> {
+	// QA Mode owns game rows and the simulated clock. A live nflverse pull would
+	// clobber simulated scores/status and lock using wall-clock time.
+	if (isQaClockEnabled()) {
+		return { ...EMPTY_RESULT, skipped: true };
+	}
+
 	const supabase = getSupabase();
 	const { data, error } = await supabase.functions.invoke<SyncResult>(SYNC_FUNCTION);
 

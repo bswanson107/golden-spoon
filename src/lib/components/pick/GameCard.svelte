@@ -3,9 +3,11 @@
 	import GameKickoffInfo from '$lib/components/pick/GameKickoffInfo.svelte';
 	import WinPctBar from '$lib/components/pick/WinPctBar.svelte';
 	import { getTeamName, getTeamSurfaceTint } from '$lib/data/nflTeams';
-	import { isUnderdog } from '$lib/demo';
+	import { isUnderdog, outcomeLabel } from '$lib/demo';
+	import { formatFinalScore } from '$lib/games';
 	import { qaNow } from '$lib/qaClock.svelte';
 	import type { WeekGame } from '$lib/types/game';
+	import type { PickOutcome } from '$lib/types/standings';
 
 	let {
 		game,
@@ -15,8 +17,8 @@
 		lockedTeamIds = new Set<string>(),
 		activeWeek = 1,
 		pickingEnabled = true,
-		showResults = false,
 		underdogThreshold = 33,
+		pickOutcome = null,
 		onSelectTeam
 	}: {
 		game: WeekGame;
@@ -27,8 +29,9 @@
 		lockedTeamIds?: Set<string>;
 		activeWeek?: number;
 		pickingEnabled?: boolean;
-		showResults?: boolean;
 		underdogThreshold?: number;
+		/** Scored outcome for the submitted pick on this game, if any. */
+		pickOutcome?: PickOutcome | null;
 		onSelectTeam?: (teamId: string) => void;
 	} = $props();
 
@@ -87,7 +90,22 @@
 	}
 
 	function yourPickTooltip(): string {
+		if (pickOutcome && pickOutcome !== 'pending') {
+			return `Your Week ${activeWeek} pick — ${outcomeLabel(pickOutcome)}.`;
+		}
 		return `This is your Week ${activeWeek} pick. You can change it until kickoff.`;
+	}
+
+	function pickMarkerText(): string {
+		if (pickOutcome && pickOutcome !== 'pending') return outcomeLabel(pickOutcome);
+		return 'Your pick';
+	}
+
+	function pickMarkerClass(): string {
+		if (pickOutcome === 'win') return 'pick-marker-win';
+		if (pickOutcome === 'loss' || pickOutcome === 'missed') return 'pick-marker-loss';
+		if (pickOutcome === 'tie') return 'pick-marker-tie';
+		return 'pick-marker-current';
 	}
 
 	const underdawgTooltip =
@@ -97,13 +115,13 @@
 		return `You already picked ${teamAbbr} in Week ${usedWeek}. Moving your pick to Week ${activeWeek} will remove your previous selection.`;
 	}
 
-	function scoreLine(): string | null {
-		if (!showResults || game.status !== 'final') return null;
-		if (game.home_score === null || game.away_score === null) return null;
-		return `${displayName(game.away.id, game.away.name)} ${game.away_score} – ${game.home_score} ${displayName(game.home.id, game.home.name)}`;
-	}
-
-	const resultLine = $derived(scoreLine());
+	const resultLine = $derived(
+		formatFinalScore(
+			game,
+			displayName(game.away.id, game.away.name),
+			displayName(game.home.id, game.home.name)
+		)
+	);
 </script>
 
 <article class="game-card" class:has-result={resultLine !== null}>
@@ -133,11 +151,11 @@
 			<div class="badges">
 				{#if pickBadge(game.away.id) === 'current'}
 					<span
-						class="pick-marker pick-marker-current"
+						class="pick-marker {pickMarkerClass()}"
 						data-tooltip={yourPickTooltip()}
 						title={yourPickTooltip()}
 						tabindex="0"
-					>Your pick</span>
+					>{pickMarkerText()}</span>
 				{:else if pickBadge(game.away.id) === 'other'}
 					{@const usedWk = pickBadgeOtherWeek(game.away.id)!}
 					<span
@@ -177,11 +195,11 @@
 			<div class="badges">
 				{#if pickBadge(game.home.id) === 'current'}
 					<span
-						class="pick-marker pick-marker-current"
+						class="pick-marker {pickMarkerClass()}"
 						data-tooltip={yourPickTooltip()}
 						title={yourPickTooltip()}
 						tabindex="0"
-					>Your pick</span>
+					>{pickMarkerText()}</span>
 				{:else if pickBadge(game.home.id) === 'other'}
 					{@const usedWk = pickBadgeOtherWeek(game.home.id)!}
 					<span
@@ -412,6 +430,21 @@
 	.pick-marker-current {
 		color: var(--win-text);
 		background: var(--win-bg);
+	}
+
+	.pick-marker-win {
+		color: var(--win-text);
+		background: var(--win-bg);
+	}
+
+	.pick-marker-loss {
+		color: var(--loss-text);
+		background: var(--loss-bg);
+	}
+
+	.pick-marker-tie {
+		color: var(--tie-text);
+		background: var(--tie-bg);
 	}
 
 	.pick-marker-other {

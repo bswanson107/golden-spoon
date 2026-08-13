@@ -45,7 +45,7 @@ export async function readStandings(
 			userId: ((await row.getAttribute('data-user')) ?? '').toLowerCase(),
 			name: ((await row.locator('.name-text').textContent()) ?? '').replace(/\s+/g, ' ').trim(),
 			points: ((await row.locator('[data-testid="standings-points"]').textContent()) ?? '').trim(),
-			record: ((await row.locator('td.num').nth(2).textContent()) ?? '').trim()
+			record: ((await row.locator('[data-testid="standings-record"]').textContent()) ?? '').trim()
 		});
 	}
 	return out;

@@ -121,7 +121,7 @@
 					<td class="col-num points" data-testid="standings-points"
 						>{row.total_points.toFixed(1)}</td
 					>
-					<td class="col-num">{formatRecord(row)}</td>
+					<td class="col-num" data-testid="standings-record">{formatRecord(row)}</td>
 					<td class="col-num col-tb tb">{row.tiebreaker_picked_team_wins}</td>
 				</tr>
 			{/each}

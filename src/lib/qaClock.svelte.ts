@@ -20,8 +20,11 @@ type QaClockState = {
 };
 
 const STORAGE_KEY = 'golden-spoon-qa-clock';
+const WALL_TICK_MS = 15_000;
 
 const clock = $state<QaClockState>({ enabled: false, simulatedNowMs: null });
+/** Bumped on an interval / tab focus so live `qaNow()` is reactive in `$derived`. */
+let wallTick = $state(0);
 
 function readCache(): QaClockState | null {
 	if (!browser) return null;
@@ -53,6 +56,7 @@ function writeCache(): void {
 
 /** Current "now" in epoch ms — simulated when the QA clock is enabled. */
 export function qaNow(): number {
+	void wallTick;
 	if (clock.enabled && clock.simulatedNowMs !== null) {
 		return clock.simulatedNowMs;
 	}
@@ -89,6 +93,32 @@ function ingestRow(row: QaClockRow | null | undefined): void {
 		!!row.enabled,
 		row.simulated_now ? new Date(row.simulated_now).getTime() : null
 	);
+}
+
+function bumpWallTick() {
+	wallTick += 1;
+}
+
+/**
+ * Keep live `qaNow()` moving while the tab is open. QA Mode still returns the
+ * frozen simulated instant; the tick only re-runs derived kickoff/lock UI.
+ * Call once from the root layout.
+ */
+export function startQaClockTicker(): () => void {
+	if (!browser) return () => {};
+
+	const onVisible = () => {
+		if (document.visibilityState === 'visible') bumpWallTick();
+	};
+	const id = window.setInterval(bumpWallTick, WALL_TICK_MS);
+	document.addEventListener('visibilitychange', onVisible);
+	window.addEventListener('focus', bumpWallTick);
+
+	return () => {
+		window.clearInterval(id);
+		document.removeEventListener('visibilitychange', onVisible);
+		window.removeEventListener('focus', bumpWallTick);
+	};
 }
 
 /** Load the clock from cache (sync) then the DB (async). Call once on app load. */

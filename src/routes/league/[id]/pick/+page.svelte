@@ -10,6 +10,7 @@
 	import { hasDemoPicks, loadDemoState, regularSeasonWeek, resetDemoPicks, saveDemoState } from '$lib/demo';
 	import { fetchSeasonWeekCompletion, resolveCurrentWeek } from '$lib/games';
 	import { fetchLeague } from '$lib/leagues';
+	import { subscribeLiveRefresh } from '$lib/liveRefresh';
 	import { normalizeUnderdogThreshold } from '$lib/leagueRules';
 	import { loadViewWeek, saveViewWeek } from '$lib/pickView';
 	import { fetchUserLeaguePicks, picksByWeek, saveLeaguePick, type UserLeaguePick } from '$lib/picks';
@@ -40,6 +41,7 @@
 	let saveError = $state<string | null>(null);
 	let seasonPicksOpen = $state(false);
 	let currentWeek = $state(1);
+	let gamesRefreshToken = $state(0);
 
 	function setViewMode(mode: ViewMode) {
 		viewMode = mode;
@@ -162,6 +164,40 @@
 			userPicks = picksResult.picks;
 		}
 	}
+
+	async function refreshLivePickData() {
+		const leagueData = league;
+		if (!leagueData || isDemoSeason(leagueData.season_year)) return;
+
+		const completion = await fetchSeasonWeekCompletion(leagueData.season_year);
+		if (!completion.error) {
+			currentWeek = resolveCurrentWeek(
+				completion.weeks,
+				qaNowDate(),
+				leagueData.season_year
+			);
+		}
+		await reloadUserPicks();
+		gamesRefreshToken += 1;
+	}
+
+	$effect(() => {
+		const leagueData = league;
+		if (!leagueData || isDemoSeason(leagueData.season_year)) return;
+		return subscribeLiveRefresh(() => {
+			void refreshLivePickData();
+		});
+	});
+
+	$effect(() => {
+		const clockMs = qaSimulatedNowMs();
+		const enabled = isQaClockEnabled();
+		const leagueData = league;
+		if (!enabled || clockMs === null || !leagueData || isDemoSeason(leagueData.season_year)) {
+			return;
+		}
+		void refreshLivePickData();
+	});
 
 	function persistDemoState(next: DemoState) {
 		const user = auth.user;
@@ -292,6 +328,7 @@
 				{viewMode}
 				readOnly={isPublicDemo}
 				currentWeek={isDemo ? null : currentWeek}
+				gamesRefreshToken={isDemo ? 0 : gamesRefreshToken}
 				onSavePick={isDemo ? handleSaveDemoPick : handleSaveLivePick}
 				onOpenSeasonOutlook={isPublicDemo ? undefined : () => (seasonPicksOpen = true)}
 			/>
