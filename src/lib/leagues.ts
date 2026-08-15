@@ -88,6 +88,10 @@ export async function ensurePublicDemoMemberships(): Promise<{ error: string | n
 	return { error: null };
 }
 
+export function isPublicDemoLeagueId(leagueId: string | null | undefined): boolean {
+	return leagueId === PUBLIC_DEMO_LEAGUE_ID;
+}
+
 function asLeagueWithRole(league: League, userId: string, joinedAt: string): LeagueWithRole {
 	return {
 		...league,
@@ -343,12 +347,14 @@ export async function adminDeleteLeague(
 
 export async function fetchLeague(
 	leagueId: string,
-	userId: string
+	userId?: string | null
 ): Promise<{ league: LeagueWithRole | null; error: string | null }> {
 	const supabase = getSupabase();
 
 	// Keep RPC for setup detection; after 029 it no longer inserts memberships.
-	await ensurePublicDemoMemberships();
+	if (userId) {
+		await ensurePublicDemoMemberships();
+	}
 
 	const { data, error } = await supabase
 		.from('leagues')
@@ -362,6 +368,16 @@ export async function fetchLeague(
 
 	const league = data as League;
 	const isPublicDemo = Boolean(league.is_public_demo);
+
+	if (!userId) {
+		if (!isPublicDemo) {
+			return { league: null, error: 'League not found.' };
+		}
+		return {
+			league: asLeagueWithRole(league, '', league.created_at),
+			error: null
+		};
+	}
 
 	const { data: membership } = await supabase
 		.from('league_members')

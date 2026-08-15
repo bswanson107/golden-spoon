@@ -12,6 +12,22 @@ html {
 	color: var(--text);
 }
 
+html[data-theme='dark'] {
+	background-color: var(--bg);
+	background-image:
+		radial-gradient(
+			ellipse 65% 40% at 10% 0%,
+			color-mix(in srgb, var(--brand) 10%, transparent),
+			transparent
+		),
+		radial-gradient(
+			ellipse 50% 35% at 90% 5%,
+			color-mix(in srgb, var(--brand) 7%, transparent),
+			transparent
+		);
+	background-attachment: fixed;
+}
+
 body {
 	margin: 0;
 	min-height: 100vh;
@@ -19,7 +35,7 @@ body {
 	font-size: 1rem;
 	line-height: 1.5;
 	-webkit-font-smoothing: antialiased;
-	background-color: var(--bg);
+	background-color: transparent;
 	color: var(--text);
 }
 

@@ -12,6 +12,7 @@
 	import PicksGrid from '$lib/components/league/PicksGrid.svelte';
 	import {
 		getMaxVisibleWeek,
+		GUEST_DEMO_USER_ID,
 		hasDemoPicks,
 		loadDemoState,
 		mergeDemoLeagueView,
@@ -29,7 +30,8 @@
 	import {
 		adminDeleteLeague,
 		adminKickLeagueMember,
-		fetchLeague
+		fetchLeague,
+		isPublicDemoLeagueId
 	} from '$lib/leagues';
 	import {
 		parsePickVisibility,
@@ -92,10 +94,6 @@
 
 	const leagueView = $derived.by(() => {
 		const user = auth.user;
-		if (!user) {
-			return { picks, standings, maxVisibleWeek: 18 as number | null, demoActive: false };
-		}
-
 		if (!demoState.enabled) {
 			return { picks, standings, maxVisibleWeek: null, demoActive: false };
 		}
@@ -105,10 +103,9 @@
 		}
 
 		// Public demo: browse historical pool only — never surface the current viewer.
-		const sourcePicks = isPublicDemo ? picks.filter((pick) => pick.user_id !== user.id) : picks;
-		const sourceStandings = isPublicDemo
-			? standings.filter((row) => row.user_id !== user.id)
-			: standings;
+		const sourcePicks = isPublicDemo && user ? picks.filter((pick) => pick.user_id !== user.id) : picks;
+		const sourceStandings =
+			isPublicDemo && user ? standings.filter((row) => row.user_id !== user.id) : standings;
 
 		return {
 			...mergeDemoLeagueView(
@@ -116,7 +113,7 @@
 				sourceStandings,
 				demoState,
 				demoGamesByWeek,
-				user.id,
+				user?.id ?? GUEST_DEMO_USER_ID,
 				playerDisplayName,
 				league?.tiebreaker_mode ?? 'fewest_wins',
 				!isPublicDemo
@@ -238,18 +235,16 @@
 	const rulesPickVisibility = $derived(parsePickVisibility(league?.pick_visibility));
 
 	function refreshDemoState() {
-		const user = auth.user;
 		const id = leagueId;
-		if (!user || !id || !league) return;
-		demoState = loadDemoState(id, user.id, league.season_year);
+		if (!id || !league) return;
+		demoState = loadDemoState(id, auth.user?.id ?? GUEST_DEMO_USER_ID, league.season_year);
 	}
 
 	function persistDemoState(next: DemoState) {
-		const user = auth.user;
 		const id = leagueId;
-		if (!user || !id) return;
+		if (!id) return;
 		demoState = next;
-		saveDemoState(id, user.id, next);
+		saveDemoState(id, auth.user?.id ?? GUEST_DEMO_USER_ID, next);
 	}
 
 	function handleDemoWeekChange(simulatedWeek: number) {
@@ -262,9 +257,8 @@
 	}
 
 	async function reloadLeagueData() {
-		const user = auth.user;
 		const id = leagueId;
-		if (!user || !id) return;
+		if (!id) return;
 
 		const [standingsResult, picksResult] = await Promise.all([
 			fetchLeagueStandings(id),
@@ -364,13 +358,14 @@
 	$effect(() => {
 		const user = auth.user;
 		const id = leagueId;
-		if (auth.loading || !user || !id) return;
+		if (auth.loading || !id) return;
+		if (!user && !isPublicDemoLeagueId(id)) return;
 
 		loading = true;
 		error = null;
 
 		Promise.all([
-			fetchLeague(id, user.id),
+			fetchLeague(id, user?.id ?? null),
 			fetchLeagueStandings(id),
 			fetchLeaguePicks(id),
 			fetchLeaguePickSubmissions(id)
@@ -390,7 +385,11 @@
 						leagueResult.league.season_year
 					);
 				}
-				demoState = loadDemoState(id, user.id, leagueResult.league.season_year);
+				demoState = loadDemoState(
+					id,
+					user?.id ?? GUEST_DEMO_USER_ID,
+					leagueResult.league.season_year
+				);
 				if (standingsResult.error) {
 					error = standingsResult.error;
 					standings = [];

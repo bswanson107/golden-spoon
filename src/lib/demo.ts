@@ -13,6 +13,9 @@ import type { LeaguePick, PickOutcome, StandingRow } from '$lib/types/standings'
 
 const STORAGE_PREFIX = 'golden-spoon-demo';
 
+/** localStorage key when browsing a public demo without signing in. */
+export const GUEST_DEMO_USER_ID = 'guest';
+
 export { DEFAULT_UNDERDOG_THRESHOLD };
 
 export function demoStorageKey(leagueId: string, userId: string): string {

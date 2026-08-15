@@ -7,9 +7,9 @@
 	import DemoBanner from '$lib/components/pick/DemoBanner.svelte';
 	import PickWeekPanel from '$lib/components/pick/PickWeekPanel.svelte';
 	import SeasonLongPicksModal from '$lib/components/pick/SeasonLongPicksModal.svelte';
-	import { hasDemoPicks, loadDemoState, regularSeasonWeek, resetDemoPicks, saveDemoState } from '$lib/demo';
+	import { hasDemoPicks, GUEST_DEMO_USER_ID, loadDemoState, regularSeasonWeek, resetDemoPicks, saveDemoState } from '$lib/demo';
 	import { fetchSeasonWeekCompletion, resolveCurrentWeek } from '$lib/games';
-	import { fetchLeague } from '$lib/leagues';
+	import { fetchLeague, isPublicDemoLeagueId } from '$lib/leagues';
 	import { subscribeLiveRefresh } from '$lib/liveRefresh';
 	import { normalizeUnderdogThreshold } from '$lib/leagueRules';
 	import { loadViewWeek, saveViewWeek } from '$lib/pickView';
@@ -110,12 +110,13 @@
 	$effect(() => {
 		const user = auth.user;
 		const id = leagueId;
-		if (auth.loading || !user || !id) return;
+		if (auth.loading || !id) return;
+		if (!user && !isPublicDemoLeagueId(id)) return;
 
 		loading = true;
 		error = null;
 
-		fetchLeague(id, user.id).then(async (result) => {
+		fetchLeague(id, user?.id ?? null).then(async (result) => {
 			if (result.error || !result.league) {
 				league = null;
 				error = result.error ?? 'League not found.';
@@ -125,23 +126,24 @@
 			}
 
 			league = result.league;
+			const storageUserId = user?.id ?? GUEST_DEMO_USER_ID;
 
 			if (isDemoSeason(result.league.season_year)) {
-				demoState = loadDemoState(id, user.id, result.league.season_year);
+				demoState = loadDemoState(id, storageUserId, result.league.season_year);
 				viewWeek = demoState.simulatedWeek;
 				userPicks = [];
 			} else {
 				const seasonYear = result.league.season_year;
 				const completion = await fetchSeasonWeekCompletion(seasonYear);
 				const liveWeek = completion.error
-					? loadViewWeek(id, user.id, seasonYear)
+					? loadViewWeek(id, user!.id, seasonYear)
 					: resolveCurrentWeek(completion.weeks, qaNowDate(), seasonYear);
 				currentWeek = liveWeek;
-				const loadedViewWeek = loadViewWeek(id, user.id, seasonYear);
+				const loadedViewWeek = loadViewWeek(id, user!.id, seasonYear);
 				viewWeek = Math.max(loadedViewWeek, liveWeek);
-				saveViewWeek(id, user.id, viewWeek);
-				demoState = loadDemoState(id, user.id, seasonYear);
-				const picksResult = await fetchUserLeaguePicks(id, user.id);
+				saveViewWeek(id, user!.id, viewWeek);
+				demoState = loadDemoState(id, user!.id, seasonYear);
+				const picksResult = await fetchUserLeaguePicks(id, user!.id);
 				if (picksResult.error) {
 					error = picksResult.error;
 					userPicks = [];
@@ -200,22 +202,21 @@
 	});
 
 	function persistDemoState(next: DemoState) {
-		const user = auth.user;
 		const id = leagueId;
-		if (!user || !id) return;
+		if (!id) return;
 		demoState = next;
-		saveDemoState(id, user.id, next);
+		saveDemoState(id, auth.user?.id ?? GUEST_DEMO_USER_ID, next);
 	}
 
 	function handleWeekChange(week: number) {
 		const user = auth.user;
 		const id = leagueId;
-		if (!user || !id || !league) return;
+		if (!id || !league) return;
 
 		if (isDemoSeason(league.season_year)) {
 			persistDemoState({ ...demoState, simulatedWeek: week });
 			viewWeek = week;
-		} else {
+		} else if (user) {
 			viewWeek = week;
 			saveViewWeek(id, user.id, week);
 		}

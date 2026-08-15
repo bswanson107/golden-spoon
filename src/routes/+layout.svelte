@@ -7,7 +7,8 @@
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import type { Session } from '@supabase/supabase-js';
-	import spoonFavicon from '$lib/assets/spoonFavicon.png';
+	import spoonLogo from '$lib/assets/chatGPTLogoRotated.png';
+	import gsFavicon from '$lib/assets/GSfavicon.png';
 	import { AUTH_CONTEXT_KEY, ADMIN_CONTEXT_KEY, type AuthStore, type AdminStore } from '$lib/auth';
 	import { getSupabase } from '$lib/supabase';
 	import { isAppAdmin, loadAdminMode, saveAdminMode } from '$lib/admin';
@@ -16,7 +17,7 @@
 	import { hydrateQaClock, startQaClockTicker } from '$lib/qaClock.svelte';
 	import { getTheme, initTheme, setTheme } from '$lib/themeStore.svelte';
 	import LeagueHeaderNav from '$lib/components/league/LeagueHeaderNav.svelte';
-	import { fetchMyLeagues, PUBLIC_DEMO_LEAGUE_ID } from '$lib/leagues';
+	import { fetchMyLeagues, isPublicDemoLeagueId, PUBLIC_DEMO_LEAGUE_ID } from '$lib/leagues';
 	import type { LeagueWithRole } from '$lib/types/league';
 	import {
 		getSeasonIndicatorLabel,
@@ -64,7 +65,7 @@
 		!auth.loading && auth.user !== null && isAppAdmin(auth.user.email)
 	);
 
-	const publicRoutes = new Set(['/', '/login', '/signup', '/design']);
+	const publicRoutes = new Set(['/', '/login', '/signup', '/design', '/about']);
 
 	const seasonLabel = $derived(getSeasonIndicatorLabel());
 	const seasonTooltip = $derived(getSeasonIndicatorTooltip());
@@ -81,16 +82,18 @@
 
 	const overviewActive = $derived(routeId === '/league/[id]');
 	const pickActive = $derived(routeId === '/league/[id]/pick');
+	const isHome = $derived(routeId === '/');
+	const showDemoExit = $derived(isPublicDemoLeagueId(routeLeagueId));
+	const showHomeLeagues = $derived(isHome && !auth.loading && auth.user !== null);
+	const showHomeAuth = $derived(
+		(isHome || showDemoExit) && !auth.loading && auth.user === null
+	);
 
 	const showLeagueNav = $derived(
 		auth.user !== null &&
 			(overviewActive || pickActive) &&
 			routeLeagueId !== null &&
 			routeLeagueId !== PUBLIC_DEMO_LEAGUE_ID
-	);
-
-	const showDemoExit = $derived(
-		auth.user !== null && routeLeagueId === PUBLIC_DEMO_LEAGUE_ID
 	);
 
 	const navLeague = $derived.by(() => {
@@ -182,7 +185,10 @@
 		if (loading) return;
 
 		const routeId = $page.route.id;
-		const isPublic = routeId !== null && publicRoutes.has(routeId);
+		const demoPublic =
+			isPublicDemoLeagueId($page.params.id) &&
+			(routeId === '/league/[id]' || routeId === '/league/[id]/pick');
+		const isPublic = (routeId !== null && publicRoutes.has(routeId)) || demoPublic;
 
 		if (!auth.user && !isPublic) {
 			goto(`${base}/login`);
@@ -227,7 +233,7 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={spoonFavicon} type="image/png" />
+	<link rel="icon" href={gsFavicon} type="image/png" />
 </svelte:head>
 
 <div class="app" class:has-league-nav={showLeagueNav}>
@@ -236,8 +242,11 @@
 		<div class="header-inner">
 		<div class="brand-block">
 			<a href="{base}/" class="brand">
-				<span class="brand-line">Golden</span>
-				<span class="brand-line">Spoon</span>
+				<span class="brand-text">
+					<span class="brand-line">Golden</span>
+					<span class="brand-line">Spoon</span>
+				</span>
+				<img src={spoonLogo} alt="" class="brand-logo" />
 			</a>
 			{#if seasonTooltip}
 				<button type="button" class="season-indicator-wrap" aria-label={seasonLabel}>
@@ -249,22 +258,33 @@
 			{/if}
 		</div>
 
-		{#if showLeagueNav}
-			<LeagueHeaderNav
-				leagues={playableLeagues}
-				currentLeague={navLeague}
-				{overviewHref}
-				picksHref={pickHref}
-				{overviewActive}
-				picksActive={pickActive}
-			/>
-		{:else if showDemoExit}
-			<nav class="demo-exit-nav" aria-label="Demo">
-				<a href="{base}/leagues" class="btn btn-ghost btn-sm">Exit Demo</a>
-			</nav>
-		{/if}
+		<div class="header-center">
+			{#if showLeagueNav}
+				<LeagueHeaderNav
+					leagues={playableLeagues}
+					currentLeague={navLeague}
+					{overviewHref}
+					picksHref={pickHref}
+					{overviewActive}
+					picksActive={pickActive}
+				/>
+			{:else if showDemoExit}
+				<nav class="demo-exit-nav" aria-label="Demo">
+					<a href={auth.user ? `${base}/leagues` : `${base}/`} class="btn btn-ghost btn-sm"
+						>Exit Demo</a
+					>
+				</nav>
+			{:else if showHomeLeagues}
+				<nav class="home-leagues-nav" aria-label="Leagues">
+					<a href="{base}/leagues" class="btn btn-ghost btn-sm">Leagues</a>
+				</nav>
+			{/if}
+		</div>
 
 		<div class="header-actions">
+			{#if showHomeAuth}
+				<a href="{base}/login" class="btn btn-primary btn-sm header-auth-btn">Login / Create Account</a>
+			{/if}
 			<div class="menu-wrap" bind:this={menuWrap}>
 				<button
 					type="button"
@@ -342,6 +362,9 @@
 								</div>
 							</div>
 							<ul class="menu-list">
+								<li>
+									<a href="{base}/" class="menu-link" onclick={closeMenu}>About</a>
+								</li>
 								<li>
 									<a href="{base}/leagues" class="menu-link" onclick={closeMenu}>Leagues</a>
 								</li>
@@ -428,6 +451,9 @@
 							</div>
 							<ul class="menu-list">
 								<li>
+									<a href="{base}/" class="menu-link" onclick={closeMenu}>About</a>
+								</li>
+								<li>
 									<a href="{base}/login" class="menu-link" onclick={closeMenu}>Sign in</a>
 								</li>
 								<li>
@@ -469,9 +495,9 @@
 	}
 
 	.header-inner {
-		display: flex;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 		align-items: center;
-		justify-content: space-between;
 		gap: 0.35rem;
 		width: 100%;
 		max-width: var(--app-content-max, 50rem);
@@ -493,13 +519,16 @@
 		align-items: flex-start;
 		gap: 0.12rem;
 		min-width: 0;
+		justify-self: start;
 		flex-shrink: 0;
 		overflow: visible;
 	}
 
 	.brand {
 		display: flex;
-		flex-direction: column;
+		flex-direction: row;
+		align-items: center;
+		gap: 0;
 		font-family: var(--font-display);
 		font-size: 0.95rem;
 		font-weight: 700;
@@ -507,6 +536,20 @@
 		color: var(--brand);
 		text-decoration: none;
 		letter-spacing: -0.02em;
+	}
+
+	.brand-text {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.brand-logo {
+		display: block;
+		height: 2.1em;
+		width: auto;
+		flex-shrink: 0;
+		object-fit: contain;
+		margin-left: -0.08rem;
 	}
 
 	.brand-line {
@@ -580,18 +623,33 @@
 		visibility: visible;
 	}
 
-	.demo-exit-nav {
+	.header-center {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		flex: 1 1 auto;
+		justify-self: center;
 		min-width: 0;
+		align-self: stretch;
+	}
+
+	.demo-exit-nav,
+	.home-leagues-nav {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 0;
+	}
+
+	.header-auth-btn {
+		white-space: nowrap;
 	}
 
 	.header-actions {
 		display: flex;
 		align-items: center;
+		justify-content: flex-end;
 		gap: 0.45rem;
+		justify-self: end;
 		flex-shrink: 0;
 	}
 

@@ -127,7 +127,11 @@
 	<button type="button" class="btn btn-ghost btn-sm" onclick={() => (rulesOpen = true)}>
 		Rules
 	</button>
-	<a href="{base}/leagues" class="btn btn-ghost btn-sm">Other leagues</a>
+	{#if league.is_public_demo}
+		<a href="{base}/" class="btn btn-ghost btn-sm">Home</a>
+	{:else}
+		<a href="{base}/leagues" class="btn btn-ghost btn-sm">Other leagues</a>
+	{/if}
 </footer>
 
 <LeagueRulesModal
