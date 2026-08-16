@@ -85,9 +85,7 @@
 	const isHome = $derived(routeId === '/');
 	const showDemoExit = $derived(isPublicDemoLeagueId(routeLeagueId));
 	const showHomeLeagues = $derived(isHome && !auth.loading && auth.user !== null);
-	const showHomeAuth = $derived(
-		(isHome || showDemoExit) && !auth.loading && auth.user === null
-	);
+	const showHomeAuth = $derived(isHome && !auth.loading && auth.user === null);
 
 	const showLeagueNav = $derived(
 		auth.user !== null &&

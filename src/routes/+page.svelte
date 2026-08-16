@@ -40,12 +40,11 @@
 	</section>
 
 	<section class="panel panel-why" aria-labelledby="why-heading">
-		<h2 id="why-heading" class="panel-title">Why Golden Spoon?</h2>
+		<h2 id="why-heading" class="panel-title">Why "Golden Spoon"?</h2>
 		<p>
 			My family is Italian—we love homemade sauce. And football. Naturally, our family league winner
-			gets the Golden Spoon—the trophy that inspired this platform. This platform is built for any
-			pool but born from ours. What started with manually tracking the pool in Google Sheets has
-			become a full-stack web app.
+			gets the Golden Spoon—the trophy that inspired this platform. What started with manually
+			tracking the pool in Google Sheets has become a full-stack web app.
 		</p>
 
 		<div class="trophy-compare">
@@ -62,22 +61,31 @@
 				</div>
 			</figure>
 		</div>
+
+		<p class="why-footer">
+			While this platform was born to upgrade the experience for one family league, it has since
+			been created to host a variety of different leagues. Feel free to join an existing league or
+			create your own!
+		</p>
 	</section>
 
 	<section class="panel" aria-labelledby="me-heading">
 		<div class="about-me">
-			<img class="headshot" src={benPhoto} alt="Ben Swanson with his daughter on his shoulders" />
+			<div class="about-me-photo">
+				<h2 id="me-heading" class="panel-title">About</h2>
+				<img class="headshot" src={benPhoto} alt="Ben Swanson with his daughter on his shoulders" />
+			</div>
 			<div class="about-me-copy">
-				<h2 id="me-heading" class="name">About Ben Swanson</h2>
+				<h3 class="name">Ben Swanson</h3>
 				<p class="role">Developer / ✨Vibecoder✨</p>
 				<blockquote>
 					<p>
-						As a developer in a rapidly changing AI tech landscape, I wanted a side-project that
-						would be something that:
+						I'm a developer in a tech landscape that has changed rapidly with the explosion of AI
+						Tech. In order to keep up, I was looking for a side-project that would:
 					</p>
 					<ul>
-						<li>keeps me busy building AI skills and disciplines</li>
-						<li>I'm excited about.</li>
+						<li>keep me busy building AI skills and disciplines</li>
+						<li>be something I'm excited about (Football season is my favorite!!)</li>
 					</ul>
 					<p>
 						Along the way, I’ve learned to effectively leverage AI agents to design, build, and
@@ -226,7 +234,7 @@
 	.panel-title {
 		margin: 0 0 0.65rem;
 		font-family: var(--font-display);
-		font-size: 1.15rem;
+		font-size: 1.65rem;
 		line-height: 1.25;
 		color: var(--text);
 		letter-spacing: -0.02em;
@@ -261,17 +269,20 @@
 		gap: 2rem;
 	}
 
+	.panel p.why-footer {
+		margin-top: 1.25rem;
+	}
+
 	.from-shot img {
 		display: block;
-		width: 80%;
+		width: 92.5%;
 		border-radius: 0.2rem;
 		background: var(--surface-2);
 		box-shadow: var(--shadow);
-		transform: rotate(-2.5deg);
 	}
 
 	figcaption {
-		width: 80%;
+		width: 92.5%;
 		font-size: 0.78rem;
 		font-weight: 700;
 		letter-spacing: 0.04em;
@@ -282,7 +293,7 @@
 
 	.scrapbook {
 		position: relative;
-		width: 80%;
+		width: 92.5%;
 		display: grid;
 		padding-bottom: 2.75rem;
 	}
@@ -300,7 +311,6 @@
 		width: 68%;
 		justify-self: start;
 		margin-bottom: 18%;
-		transform: rotate(-7deg);
 		z-index: 1;
 	}
 
@@ -309,15 +319,25 @@
 		width: 72%;
 		justify-self: end;
 		margin-top: 18%;
-		transform: rotate(5deg);
 		z-index: 2;
 	}
 
 	.about-me {
 		display: grid;
-		grid-template-columns: 8.5rem minmax(0, 1fr);
-		gap: 1.15rem 1.25rem;
+		grid-template-columns: auto minmax(0, 1fr);
+		gap: 1.15rem 1.5rem;
 		align-items: start;
+	}
+
+	.about-me-photo {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		min-width: 8.5rem;
+	}
+
+	.about-me-photo .panel-title {
+		margin-bottom: 0.75rem;
 	}
 
 	.headshot {
@@ -331,12 +351,12 @@
 	.name {
 		margin: 0 0 0.15rem;
 		font-family: var(--font-display);
-		font-size: 1.2rem;
+		font-size: 1.05rem;
 		letter-spacing: -0.02em;
 	}
 
-	.role {
-		margin: 0 0 0.85rem;
+	.about-me-copy .role {
+		margin: 0 0 0.95rem;
 		font-size: 0.92rem;
 		font-weight: 600;
 		color: var(--text-muted);

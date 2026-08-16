@@ -356,17 +356,32 @@ export async function fetchLeague(
 		await ensurePublicDemoMemberships();
 	}
 
-	const { data, error } = await supabase
+	const tableResult = await supabase
 		.from('leagues')
 		.select(LEAGUE_SELECT)
 		.eq('id', leagueId)
-		.single();
+		.maybeSingle();
 
-	if (error || !data) {
-		return { league: null, error: error?.message ?? 'League not found.' };
+	let league = (tableResult.data as League | null) ?? null;
+
+	if (!league) {
+		const rpcResult = await supabase
+			.rpc('get_viewable_league', { p_league_id: leagueId })
+			.maybeSingle();
+
+		if (rpcResult.data) {
+			league = rpcResult.data as League;
+		} else if (rpcResult.error && !rpcResult.error.message.includes('get_viewable_league')) {
+			return { league: null, error: rpcResult.error.message };
+		} else if (tableResult.error && tableResult.error.code !== 'PGRST116') {
+			return { league: null, error: tableResult.error.message };
+		}
 	}
 
-	const league = data as League;
+	if (!league) {
+		return { league: null, error: 'League not found.' };
+	}
+
 	const isPublicDemo = Boolean(league.is_public_demo);
 
 	if (!userId) {
