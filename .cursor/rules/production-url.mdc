@@ -1,0 +1,13 @@
+---
+description: Production site URL and routing
+globs: src/**/*.{svelte,ts}
+alwaysApply: false
+---
+
+# Production URL
+
+The live site is `https://goldenspoon.xyz` with an empty `paths.base`. Do not set `GITHUB_PAGES`, do not use `/golden-spoon` as a base path, and do not link to `*.github.io`.
+
+- Import `base` from `$app/paths` for `<a href>` attributes: `href="{base}/leagues"`.
+- Use `` goto(`${base}/path`) `` for programmatic navigation.
+- For auth/route guards, use `$page.route.id` (e.g. `/login`), not `$page.url.pathname`.

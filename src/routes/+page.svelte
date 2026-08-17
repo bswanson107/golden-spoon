@@ -26,7 +26,8 @@
 			<li>Pick wrong, no points</li>
 		</ul>
 		<p class="lead lead-follow">
-			One bad pick doesn't end your season, and there's always a chance for a comeback.
+			Play the whole season, a few minutes per week. No elimination from one bad pick, and there's
+			always a chance for a comeback.
 		</p>
 		<div class="btn-row">
 			{#if !auth.loading && !auth.user}
@@ -80,12 +81,12 @@
 				<p class="role">Developer / ✨Vibecoder✨</p>
 				<blockquote>
 					<p>
-						I'm a developer in a tech landscape that has changed rapidly with the explosion of AI
-						Tech. In order to keep up, I was looking for a side-project that would:
+						I'm a developer in a tech landscape that has changed rapidly with the explosion of AI.
+						In order to keep up, I was looking for a side-project that would:
 					</p>
 					<ul>
 						<li>keep me busy building AI skills and disciplines</li>
-						<li>be something I'm excited about (Football season is my favorite!!)</li>
+						<li>be something I'm excited about (I love football!)</li>
 					</ul>
 					<p>
 						Along the way, I’ve learned to effectively leverage AI agents to design, build, and
