@@ -35,7 +35,7 @@
 			<input
 				type="text"
 				name="inviteCode"
-				placeholder="e.g. geiger-family"
+				placeholder="e.g. family-pool"
 				required
 				autocapitalize="off"
 				autocomplete="off"

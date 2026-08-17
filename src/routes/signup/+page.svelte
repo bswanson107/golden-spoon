@@ -57,7 +57,6 @@
 
 <main class="page">
 	<h1 class="page-title">Create account</h1>
-	<p class="page-subtitle">Join the family pool</p>
 
 	{#if auth.loading}
 		<p class="page-subtitle">Checking session…</p>
