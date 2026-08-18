@@ -85,8 +85,9 @@
 			</button>
 		</form>
 
-		<p class="auth-footer">
-			No account? <a href="{base}/signup">Create one</a>
-		</p>
+		<div class="auth-actions">
+			<a href="{base}/forgot-password" class="btn btn-ghost btn-sm">Forgot password?</a>
+			<a href="{base}/signup" class="btn btn-ghost btn-sm">Create account</a>
+		</div>
 	{/if}
 </main>

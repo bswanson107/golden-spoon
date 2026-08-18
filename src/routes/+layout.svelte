@@ -65,7 +65,15 @@
 		!auth.loading && auth.user !== null && isAppAdmin(auth.user.email)
 	);
 
-	const publicRoutes = new Set(['/', '/login', '/signup', '/design', '/about']);
+	const publicRoutes = new Set([
+		'/',
+		'/login',
+		'/signup',
+		'/forgot-password',
+		'/reset-password',
+		'/design',
+		'/about'
+	]);
 
 	const seasonLabel = $derived(getSeasonIndicatorLabel());
 	const seasonTooltip = $derived(getSeasonIndicatorTooltip());
@@ -85,7 +93,9 @@
 	const isHome = $derived(routeId === '/');
 	const showDemoExit = $derived(isPublicDemoLeagueId(routeLeagueId));
 	const showHomeLeagues = $derived(isHome && !auth.loading && auth.user !== null);
-	const showHomeAuth = $derived(isHome && !auth.loading && auth.user === null);
+	const showHomeAuth = $derived(
+		(isHome || routeId === '/about') && !auth.loading && auth.user === null
+	);
 
 	const showLeagueNav = $derived(
 		auth.user !== null &&
@@ -123,9 +133,12 @@
 
 		const {
 			data: { subscription }
-		} = supabase.auth.onAuthStateChange((_event, nextSession) => {
+		} = supabase.auth.onAuthStateChange((event, nextSession) => {
 			session = nextSession;
 			loading = false;
+			if (event === 'PASSWORD_RECOVERY') {
+				goto(`${base}/reset-password`);
+			}
 		});
 
 		const onKeyDown = (event: KeyboardEvent) => {
@@ -361,7 +374,10 @@
 							</div>
 							<ul class="menu-list">
 								<li>
-									<a href="{base}/" class="menu-link" onclick={closeMenu}>About</a>
+									<a href="{base}/" class="menu-link" onclick={closeMenu}>Home</a>
+								</li>
+								<li>
+									<a href="{base}/about" class="menu-link" onclick={closeMenu}>About</a>
 								</li>
 								<li>
 									<a href="{base}/leagues" class="menu-link" onclick={closeMenu}>Leagues</a>
@@ -449,7 +465,10 @@
 							</div>
 							<ul class="menu-list">
 								<li>
-									<a href="{base}/" class="menu-link" onclick={closeMenu}>About</a>
+									<a href="{base}/" class="menu-link" onclick={closeMenu}>Home</a>
+								</li>
+								<li>
+									<a href="{base}/about" class="menu-link" onclick={closeMenu}>About</a>
 								</li>
 								<li>
 									<a href="{base}/login" class="menu-link" onclick={closeMenu}>Sign in</a>

@@ -50,8 +50,7 @@
 			return;
 		}
 
-		message =
-			'Account created. Check your email to confirm, then sign in.';
+		message = 'Account created. You can sign in now.';
 	}
 </script>
 

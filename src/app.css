@@ -220,6 +220,14 @@ a.btn-ghost:active,
 	color: var(--link);
 }
 
+.auth-actions {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.5rem;
+	margin-top: 1.75rem;
+}
+
 .muted {
 	color: var(--text-muted);
 }
