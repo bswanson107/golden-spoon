@@ -59,6 +59,7 @@ function mapMembership(row: {
 	return {
 		...league,
 		is_commissioner: league.commissioner_id === userId,
+		is_member: true,
 		joined_at: row.joined_at
 	};
 }
@@ -92,11 +93,17 @@ export function isPublicDemoLeagueId(leagueId: string | null | undefined): boole
 	return leagueId === PUBLIC_DEMO_LEAGUE_ID;
 }
 
-function asLeagueWithRole(league: League, userId: string, joinedAt: string): LeagueWithRole {
+function asLeagueWithRole(
+	league: League,
+	userId: string,
+	joinedAt: string,
+	isMember = false
+): LeagueWithRole {
 	return {
 		...league,
 		is_public_demo: Boolean(league.is_public_demo),
-		is_commissioner: league.commissioner_id === userId,
+		is_commissioner: Boolean(userId) && league.commissioner_id === userId,
+		is_member: isMember,
 		joined_at: joinedAt
 	};
 }
@@ -382,14 +389,12 @@ export async function fetchLeague(
 		return { league: null, error: 'League not found.' };
 	}
 
-	const isPublicDemo = Boolean(league.is_public_demo);
-
 	if (!userId) {
-		if (!isPublicDemo) {
+		if (!Boolean(league.is_public_demo)) {
 			return { league: null, error: 'League not found.' };
 		}
 		return {
-			league: asLeagueWithRole(league, '', league.created_at),
+			league: asLeagueWithRole(league, '', league.created_at, false),
 			error: null
 		};
 	}
@@ -401,15 +406,22 @@ export async function fetchLeague(
 		.eq('user_id', userId)
 		.maybeSingle();
 
-	if (!membership && !isPublicDemo) {
-		return { league: null, error: 'League not found.' };
+	const isPublicDemo = Boolean(league.is_public_demo);
+	const isMember = Boolean(membership);
+
+	if (!isMember && !isPublicDemo) {
+		const { data: isAdmin } = await supabase.rpc('is_app_admin');
+		if (!isAdmin) {
+			return { league: null, error: 'League not found.' };
+		}
 	}
 
 	return {
 		league: asLeagueWithRole(
 			league,
 			userId,
-			membership?.joined_at ?? league.created_at
+			membership?.joined_at ?? league.created_at,
+			isMember
 		),
 		error: null
 	};

@@ -22,5 +22,6 @@ export type LeagueMembership = {
 
 export type LeagueWithRole = League & {
 	is_commissioner: boolean;
+	is_member: boolean;
 	joined_at: string;
 };

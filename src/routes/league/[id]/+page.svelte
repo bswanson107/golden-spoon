@@ -548,7 +548,7 @@
 			<p class="auth-error" role="alert">{deleteLeagueError}</p>
 		{/if}
 
-		{#if !isPublicDemo && (isDemo || dashboardCta.kind !== 'hidden')}
+		{#if !isPublicDemo && league.is_member && (isDemo || dashboardCta.kind !== 'hidden')}
 			<PickDashboard
 				leagueId={league.id}
 				week={dashboardWeek}

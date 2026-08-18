@@ -101,7 +101,17 @@
 		auth.user !== null &&
 			(overviewActive || pickActive) &&
 			routeLeagueId !== null &&
-			routeLeagueId !== PUBLIC_DEMO_LEAGUE_ID
+			routeLeagueId !== PUBLIC_DEMO_LEAGUE_ID &&
+			playableLeagues.some((league) => league.id === routeLeagueId)
+	);
+
+	const showAdminLeagueExit = $derived(
+		auth.user !== null &&
+			showAdminToggle &&
+			(overviewActive || pickActive) &&
+			routeLeagueId !== null &&
+			routeLeagueId !== PUBLIC_DEMO_LEAGUE_ID &&
+			!playableLeagues.some((league) => league.id === routeLeagueId)
 	);
 
 	const navLeague = $derived.by(() => {
@@ -285,6 +295,10 @@
 						>Exit Demo</a
 					>
 				</nav>
+			{:else if showAdminLeagueExit}
+				<nav class="demo-exit-nav" aria-label="Admin">
+					<a href="{base}/admin" class="btn btn-ghost btn-sm">Back to Admin</a>
+				</nav>
 			{:else if showHomeLeagues}
 				<nav class="home-leagues-nav" aria-label="Leagues">
 					<a href="{base}/leagues" class="btn btn-ghost btn-sm">Leagues</a>
@@ -387,18 +401,10 @@
 								</li>
 								{#if showAdminToggle}
 									<li>
-										<a href="{base}/qa" class="menu-link" onclick={closeMenu}>QA Mode</a>
+										<a href="{base}/admin" class="menu-link" onclick={closeMenu}>Admin</a>
 									</li>
-									<li class="menu-admin">
-										<label class="admin-toggle">
-											<input
-												type="checkbox"
-												checked={adminModeEnabled}
-												onchange={(e) =>
-													admin.setAdminMode((e.currentTarget as HTMLInputElement).checked)}
-											/>
-											<span>Admin mode</span>
-										</label>
+									<li>
+										<a href="{base}/qa" class="menu-link" onclick={closeMenu}>QA Mode</a>
 									</li>
 								{/if}
 								<li>
@@ -843,31 +849,6 @@
 	.menu-button-item:disabled {
 		opacity: 0.55;
 		cursor: not-allowed;
-	}
-
-	.menu-admin {
-		padding: 0.15rem 0.65rem;
-	}
-
-	.admin-toggle {
-		display: flex;
-		align-items: center;
-		gap: 0.45rem;
-		font-size: 0.85rem;
-		font-weight: 600;
-		color: var(--text-muted);
-		cursor: pointer;
-		user-select: none;
-	}
-
-	.admin-toggle input {
-		width: 0.9rem;
-		height: 0.9rem;
-		accent-color: var(--danger);
-	}
-
-	.admin-toggle:has(input:checked) {
-		color: var(--danger);
 	}
 
 	.content {
