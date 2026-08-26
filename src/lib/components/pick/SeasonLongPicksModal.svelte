@@ -12,7 +12,8 @@
 		pickedTeamIds = [],
 		pickedWeekByTeam = {},
 		teamByWeek = {},
-		onClose
+		onClose,
+		onSelectWeek
 	}: {
 		open?: boolean;
 		/** Team codes the user has already saved a pick for. */
@@ -22,7 +23,14 @@
 		/** Team code per week number (1–18). */
 		teamByWeek?: Record<number, string>;
 		onClose: () => void;
+		/** Jump the pick page to this week (1–18). */
+		onSelectWeek?: (week: number) => void;
 	} = $props();
+
+	function selectWeek(week: number) {
+		onSelectWeek?.(week);
+		onClose();
+	}
 
 	const pickedSet = $derived(new Set(pickedTeamIds.map((id) => id.toUpperCase())));
 	const picksCount = $derived(pickedSet.size);
@@ -86,14 +94,24 @@
 					<ul class="weeks-grid">
 						{#each weekNumbers as week (week)}
 							{@const teamCode = teamForWeek(week)}
-							<li class="week-cell" class:has-pick={teamCode !== null}>
-								<span class="week-num">Wk {week}</span>
-								{#if teamCode}
-									<TeamLogo teamCode={teamCode} size={WEEK_CELL_LOGO} />
-									<span class="week-team">{teamCode}</span>
-								{:else}
-									<span class="week-empty">—</span>
-								{/if}
+							<li>
+								<button
+									type="button"
+									class="week-cell"
+									class:has-pick={teamCode !== null}
+									aria-label={teamCode
+										? `Go to week ${week}, picked ${teamCode}`
+										: `Go to week ${week}`}
+									onclick={() => selectWeek(week)}
+								>
+									<span class="week-num">Wk {week}</span>
+									{#if teamCode}
+										<TeamLogo teamCode={teamCode} size={WEEK_CELL_LOGO} />
+										<span class="week-team">{teamCode}</span>
+									{:else}
+										<span class="week-empty">—</span>
+									{/if}
+								</button>
 							</li>
 						{/each}
 					</ul>
@@ -207,15 +225,44 @@
 		align-items: center;
 		justify-content: center;
 		gap: 0.2rem;
-		min-height: 4.1rem;
+		width: 100%;
+		height: 4.85rem;
+		min-height: 4.85rem;
+		margin: 0;
 		padding: 0.35rem 0.2rem;
+		border: none;
 		border-radius: var(--radius);
 		background: color-mix(in srgb, var(--text) 5%, var(--surface));
 		box-shadow: var(--shadow-sm);
+		font: inherit;
+		color: inherit;
+		cursor: pointer;
+		transition:
+			transform 0.08s ease,
+			box-shadow 0.08s ease,
+			background 0.12s ease;
+	}
+
+	.week-cell:hover {
+		background: color-mix(in srgb, var(--text) 10%, var(--surface));
+	}
+
+	.week-cell:active {
+		transform: translate(1px, 1px);
+		box-shadow: var(--shadow-press);
+	}
+
+	.week-cell:focus-visible {
+		outline: 2px solid var(--brand);
+		outline-offset: 2px;
 	}
 
 	.week-cell.has-pick {
 		background: color-mix(in srgb, var(--text) 8%, var(--surface));
+	}
+
+	.week-cell.has-pick:hover {
+		background: color-mix(in srgb, var(--text) 12%, var(--surface));
 	}
 
 	.week-num {
@@ -234,6 +281,13 @@
 	}
 
 	.week-empty {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.2rem;
+		width: 1.75rem;
+		height: calc(1.75rem + 0.2rem + 0.85rem);
 		font-size: 0.9rem;
 		font-weight: 600;
 		color: var(--text-muted);

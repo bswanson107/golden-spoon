@@ -342,6 +342,7 @@
 				pickedWeekByTeam={seasonPickedWeekByTeam}
 				teamByWeek={seasonTeamByWeek}
 				onClose={() => (seasonPicksOpen = false)}
+				onSelectWeek={handleWeekChange}
 			/>
 		{/if}
 
