@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -33,6 +33,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
+          GITHUB_PAGES: 'true'
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
 
@@ -49,8 +50,8 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: https://goldenspoon.xyz
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy
+      - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
