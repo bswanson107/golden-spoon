@@ -162,7 +162,7 @@
 
 	thead {
 		position: sticky;
-		top: var(--app-header-height, 3.75rem);
+		top: var(--app-sticky-top, 3.75rem);
 		z-index: 40;
 		background: var(--surface);
 	}

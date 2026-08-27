@@ -294,7 +294,7 @@
 		--picks-gap-w: 2rem;
 		--picks-week-w: 2.75rem;
 		position: sticky;
-		top: var(--app-header-height, 3.75rem);
+		top: var(--app-sticky-top, 3.75rem);
 		z-index: 40;
 		margin: -1.1rem -1.25rem 0.15rem;
 		padding: 1.1rem 0 0.35rem;

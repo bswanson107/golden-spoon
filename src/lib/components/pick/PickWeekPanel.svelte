@@ -561,7 +561,7 @@
 
 	.pick-sticky-bar {
 		position: sticky;
-		top: var(--app-header-height, 3.25rem);
+		top: var(--app-sticky-top, 3.25rem);
 		z-index: 40;
 		margin: 0 -1rem 1rem;
 		padding: 0.75rem 1rem 0.85rem;

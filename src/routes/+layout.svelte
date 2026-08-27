@@ -35,6 +35,8 @@
 	let menuOpen = $state(false);
 	let menuWrap = $state<HTMLDivElement | null>(null);
 	let myLeagues = $state<LeagueWithRole[]>([]);
+	let appEl = $state<HTMLDivElement | null>(null);
+	let headerEl = $state<HTMLElement | null>(null);
 
 	const auth: AuthStore = {
 		get session() {
@@ -72,7 +74,8 @@
 		'/forgot-password',
 		'/reset-password',
 		'/design',
-		'/about'
+		'/about',
+		'/install'
 	]);
 
 	const seasonLabel = $derived(getSeasonIndicatorLabel());
@@ -216,6 +219,28 @@
 		}
 	});
 
+	/**
+	 * The header's height is content-driven (line-height: normal text in the league nav,
+	 * webfont swap), so it lands on different sub-pixel values per browser. Publish the
+	 * measured height so sticky children never guess it and never leave a gap.
+	 */
+	$effect(() => {
+		const app = appEl;
+		const header = headerEl;
+		if (!app || !header) return;
+
+		const apply = () => {
+			const height = Math.round(header.getBoundingClientRect().height);
+			if (height > 0) app.style.setProperty('--app-header-height', `${height}px`);
+		};
+
+		apply();
+		const observer = new ResizeObserver(apply);
+		observer.observe(header);
+
+		return () => observer.disconnect();
+	});
+
 	function closeMenu() {
 		menuOpen = false;
 	}
@@ -257,9 +282,9 @@
 	<link rel="icon" href={gsFavicon} type="image/png" />
 </svelte:head>
 
-<div class="app" class:has-league-nav={showLeagueNav}>
+<div class="app" class:has-league-nav={showLeagueNav} class:flat-bg={pickActive} bind:this={appEl}>
 	<QaBanner />
-	<header class="header chrome-bar">
+	<header class="header chrome-bar" bind:this={headerEl}>
 		<div class="header-inner">
 		<div class="brand-block">
 			<a href="{base}/" class="brand">
@@ -407,6 +432,11 @@
 										<a href="{base}/qa" class="menu-link" onclick={closeMenu}>QA Mode</a>
 									</li>
 								{/if}
+								<li class="menu-item-mobile">
+									<a href="{base}/install" class="menu-link" onclick={closeMenu}
+										>Save App to Homepage</a
+									>
+								</li>
 								<li>
 									<button
 										type="button"
@@ -476,6 +506,11 @@
 								<li>
 									<a href="{base}/about" class="menu-link" onclick={closeMenu}>About</a>
 								</li>
+								<li class="menu-item-mobile">
+									<a href="{base}/install" class="menu-link" onclick={closeMenu}
+										>Save App to Homepage</a
+									>
+								</li>
 								<li>
 									<a href="{base}/login" class="menu-link" onclick={closeMenu}>Sign in</a>
 								</li>
@@ -504,10 +539,17 @@
 		display: flex;
 		flex-direction: column;
 		--app-header-height: 3.75rem;
+		/* Overlap the header by a hair so rounding differences can't open a seam. */
+		--app-sticky-top: calc(var(--app-header-height) - 2px);
 	}
 
 	.app.has-league-nav {
 		--app-header-height: 5.05rem;
+	}
+
+	/* Hide the brand gradient behind the pick page's stacked sticky bars. */
+	.app.flat-bg {
+		background: var(--bg);
 	}
 
 	.header {
@@ -849,6 +891,13 @@
 	.menu-button-item:disabled {
 		opacity: 0.55;
 		cursor: not-allowed;
+	}
+
+	/* Home-screen install only makes sense on a phone or tablet. */
+	@media (min-width: 48rem) {
+		.menu-item-mobile {
+			display: none;
+		}
 	}
 
 	.content {
