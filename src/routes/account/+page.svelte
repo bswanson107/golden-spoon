@@ -7,6 +7,7 @@
 	const auth = useAuth();
 
 	let displayName = $state('');
+	let canChangeDisplayName = $state(true);
 	let loading = $state(true);
 	let saving = $state(false);
 	let error = $state<string | null>(null);
@@ -20,6 +21,7 @@
 		error = null;
 
 		fetchProfile(user.id).then((result) => {
+			canChangeDisplayName = result.canChangeDisplayName;
 			if (result.error) {
 				error = result.error;
 				displayName = user.email?.split('@')[0] ?? '';
@@ -39,7 +41,7 @@
 	async function handleSave(event: SubmitEvent) {
 		event.preventDefault();
 		const user = auth.user;
-		if (!user) return;
+		if (!user || !canChangeDisplayName) return;
 
 		saving = true;
 		error = null;
@@ -79,10 +81,16 @@
 					bind:value={displayName}
 					maxlength="40"
 					autocomplete="nickname"
-					disabled={saving}
+					disabled={saving || !canChangeDisplayName}
 					required
 				/>
-				<p class="hint muted">Family members see this name instead of your email prefix.</p>
+				{#if canChangeDisplayName}
+					<p class="hint muted">Family members see this name instead of your email prefix.</p>
+				{:else}
+					<p class="hint muted locked-hint">
+						Your display name is locked. Contact a Golden Spoon admin if you need it changed.
+					</p>
+				{/if}
 
 				{#if error}
 					<p class="auth-error" role="alert">{error}</p>
@@ -91,7 +99,7 @@
 					<p class="success" role="status">{success}</p>
 				{/if}
 
-				<button type="submit" class="btn btn-primary" disabled={saving}>
+				<button type="submit" class="btn btn-primary" disabled={saving || !canChangeDisplayName}>
 					{saving ? 'Saving…' : 'Save'}
 				</button>
 			</form>
@@ -157,6 +165,10 @@
 
 	.hint {
 		margin: 0;
+	}
+
+	.locked-hint {
+		color: var(--text);
 	}
 
 	.email-note {

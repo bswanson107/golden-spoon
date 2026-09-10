@@ -4,6 +4,7 @@
 	import { isAppAdmin } from '$lib/admin';
 	import {
 		adminDeleteUser,
+		adminUpdateUser,
 		fetchAdminLeagues,
 		fetchAdminUsers,
 		type AdminLeagueRow,
@@ -22,6 +23,11 @@
 	let error = $state<string | null>(null);
 	let deletingUserId = $state<string | null>(null);
 	let deleteError = $state<string | null>(null);
+	let editingUserId = $state<string | null>(null);
+	let editDisplayName = $state('');
+	let editCanChangeDisplayName = $state(true);
+	let savingUserId = $state<string | null>(null);
+	let editError = $state<string | null>(null);
 
 	$effect(() => {
 		if (auth.loading) return;
@@ -43,6 +49,56 @@
 			loading = false;
 		});
 	});
+
+	function openEditUser(user: AdminUserRow) {
+		editingUserId = user.user_id;
+		editDisplayName = user.display_name;
+		editCanChangeDisplayName = user.can_change_display_name;
+		editError = null;
+	}
+
+	function cancelEditUser() {
+		editingUserId = null;
+		editError = null;
+	}
+
+	async function handleSaveUser(user: AdminUserRow) {
+		if (savingUserId) return;
+
+		const trimmed = editDisplayName.trim();
+		if (!trimmed) {
+			editError = 'Display name cannot be empty.';
+			return;
+		}
+
+		savingUserId = user.user_id;
+		editError = null;
+
+		const result = await adminUpdateUser(user.user_id, trimmed, editCanChangeDisplayName);
+		savingUserId = null;
+
+		if (result.error) {
+			editError = result.error;
+			return;
+		}
+
+		users = users.map((row) =>
+			row.user_id === user.user_id
+				? {
+						...row,
+						display_name: trimmed,
+						can_change_display_name: editCanChangeDisplayName
+					}
+				: row
+		);
+
+		const leagueResult = await fetchAdminLeagues();
+		if (!leagueResult.error) {
+			leagues = leagueResult.leagues;
+		}
+
+		editingUserId = null;
+	}
 
 	async function handleDeleteUser(user: AdminUserRow) {
 		if (deletingUserId) return;
@@ -151,9 +207,32 @@
 						{#each users as user (user.user_id)}
 							<li class="user-card">
 								<div class="user-head">
-									<div>
-										<p class="directory-name">{user.display_name}</p>
+									<div class="user-identity">
+										<div class="user-name-row">
+											<p class="directory-name">{user.display_name}</p>
+											<button
+												type="button"
+												class="icon-btn edit-btn"
+												aria-label="Edit {user.display_name}"
+												disabled={savingUserId === user.user_id || deletingUserId === user.user_id}
+												onclick={() => openEditUser(user)}
+											>
+												<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+													<path
+														fill="none"
+														stroke="currentColor"
+														stroke-width="1.75"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3ZM14 6l3 3"
+													/>
+												</svg>
+											</button>
+										</div>
 										<p class="directory-meta">{user.email}</p>
+										{#if !user.can_change_display_name}
+											<p class="lock-note">Display name locked</p>
+										{/if}
 									</div>
 									<button
 										type="button"
@@ -164,6 +243,57 @@
 										{deletingUserId === user.user_id ? 'Deleting…' : 'Delete'}
 									</button>
 								</div>
+
+								{#if editingUserId === user.user_id}
+									<form
+										class="user-edit-form"
+										onsubmit={(event) => {
+											event.preventDefault();
+											handleSaveUser(user);
+										}}
+									>
+										<label class="edit-label" for="edit-name-{user.user_id}">Display name</label>
+										<input
+											id="edit-name-{user.user_id}"
+											type="text"
+											bind:value={editDisplayName}
+											maxlength="40"
+											disabled={savingUserId === user.user_id}
+											required
+										/>
+
+										<label class="edit-toggle">
+											<input
+												type="checkbox"
+												bind:checked={editCanChangeDisplayName}
+												disabled={savingUserId === user.user_id}
+											/>
+											<span>Allow user to change their display name</span>
+										</label>
+
+										{#if editError}
+											<p class="auth-error" role="alert">{editError}</p>
+										{/if}
+
+										<div class="edit-actions">
+											<button
+												type="button"
+												class="btn btn-ghost btn-sm"
+												disabled={savingUserId === user.user_id}
+												onclick={cancelEditUser}
+											>
+												Cancel
+											</button>
+											<button
+												type="submit"
+												class="btn btn-primary btn-sm"
+												disabled={savingUserId === user.user_id}
+											>
+												{savingUserId === user.user_id ? 'Saving…' : 'Save'}
+											</button>
+										</div>
+									</form>
+								{/if}
 								{#if user.leagues.length === 0}
 									<p class="muted">Not in any leagues.</p>
 								{:else}
@@ -314,6 +444,101 @@
 		align-items: flex-start;
 		justify-content: space-between;
 		gap: 0.75rem;
+	}
+
+	.user-identity {
+		min-width: 0;
+	}
+
+	.user-name-row {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
+	.edit-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.85rem;
+		height: 1.85rem;
+		padding: 0;
+		border: none;
+		border-radius: var(--radius);
+		background: transparent;
+		color: var(--text-muted);
+		box-shadow: none;
+		cursor: pointer;
+	}
+
+	.edit-btn:hover:not(:disabled) {
+		color: var(--text);
+		background: color-mix(in srgb, var(--text) 8%, var(--surface-2));
+	}
+
+	.edit-btn:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+
+	.edit-btn .icon {
+		width: 1rem;
+		height: 1rem;
+	}
+
+	.lock-note {
+		margin: 0.2rem 0 0;
+		color: var(--text-muted);
+		font-size: 0.75rem;
+		font-weight: 600;
+	}
+
+	.user-edit-form {
+		display: flex;
+		flex-direction: column;
+		gap: 0.55rem;
+		margin-top: 0.75rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--border);
+	}
+
+	.edit-label {
+		font-size: 0.82rem;
+		font-weight: 600;
+		color: var(--text-muted);
+	}
+
+	.user-edit-form input[type='text'] {
+		padding: 0.55rem 0.65rem;
+		border: none;
+		border-radius: var(--radius);
+		background: var(--input-bg);
+		color: var(--text);
+		font-size: 0.95rem;
+		font-family: var(--font-body);
+		box-shadow: var(--shadow-sm);
+	}
+
+	.edit-toggle {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.45rem;
+		font-size: 0.88rem;
+		color: var(--text);
+		cursor: pointer;
+	}
+
+	.edit-toggle input {
+		width: 0.95rem;
+		height: 0.95rem;
+		margin-top: 0.15rem;
+		accent-color: var(--brand);
+	}
+
+	.edit-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.45rem;
 	}
 
 	.user-leagues {

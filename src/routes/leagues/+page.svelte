@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import { useAuth } from '$lib/auth';
-	import { fetchMyLeagues } from '$lib/leagues';
+	import { fetchMyLeagues, getPlayableLeagues, getSolePlayableLeaguePath } from '$lib/leagues';
 	import { isDemoSeason } from '$lib/season';
 	import type { LeagueWithRole } from '$lib/types/league';
 
@@ -16,7 +17,7 @@
 	}
 
 	const publicDemoLeagues = $derived(leagues.filter((league) => league.is_public_demo));
-	const memberLeagues = $derived(leagues.filter((league) => !league.is_public_demo));
+	const memberLeagues = $derived(getPlayableLeagues(leagues));
 
 	$effect(() => {
 		const user = auth.user;
@@ -32,6 +33,11 @@
 			leagues = result.leagues;
 			error = result.error;
 			loading = false;
+
+			const solePath = getSolePlayableLeaguePath(result.leagues, base);
+			if (solePath && !result.error) {
+				goto(solePath, { replaceState: true });
+			}
 		});
 	});
 </script>

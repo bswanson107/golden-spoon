@@ -24,6 +24,7 @@ export type AdminUserRow = {
 	user_id: string;
 	email: string;
 	display_name: string;
+	can_change_display_name: boolean;
 	created_at: string;
 	leagues: AdminUserLeague[];
 };
@@ -76,10 +77,32 @@ export async function fetchAdminUsers(): Promise<{
 
 	const users = ((data ?? []) as AdminUserRow[]).map((row) => ({
 		...row,
+		can_change_display_name: row.can_change_display_name !== false,
 		leagues: Array.isArray(row.leagues) ? row.leagues : []
 	}));
 
 	return { users, error: null };
+}
+
+export async function adminUpdateUser(
+	userId: string,
+	displayName: string,
+	canChangeDisplayName: boolean
+): Promise<{ error: string | null }> {
+	const { error } = await getSupabase().rpc('admin_update_user', {
+		p_user_id: userId,
+		p_display_name: displayName.trim(),
+		p_can_change_display_name: canChangeDisplayName
+	});
+
+	if (error) {
+		if (isMissingRpc(error, 'admin_update_user')) {
+			return { error: missingRpcMessage('admin_update_user', 'db:apply-admin-user-profiles') };
+		}
+		return { error: error.message };
+	}
+
+	return { error: null };
 }
 
 export async function adminDeleteUser(userId: string): Promise<{ error: string | null }> {

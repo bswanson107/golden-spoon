@@ -182,14 +182,25 @@ export async function fetchMyLeagues(userId: string): Promise<{
 	return { leagues: merged, error: null };
 }
 
+/** Leagues the user actually joined, excluding the public demo. */
+export function getPlayableLeagues(leagues: LeagueWithRole[]): LeagueWithRole[] {
+	return leagues.filter((league) => league.is_member && !league.is_public_demo);
+}
+
+/** When the user belongs to exactly one real league, return its overview path. */
+export function getSolePlayableLeaguePath(
+	leagues: LeagueWithRole[],
+	basePath: string
+): string | null {
+	const playable = getPlayableLeagues(leagues);
+	if (playable.length !== 1) return null;
+	return `${basePath}/league/${playable[0].id}`;
+}
+
 /** After sign-in: land on the sole real league, or the list when there are zero or many. Public demo does not count. */
 export async function getPostAuthPath(userId: string, basePath: string): Promise<string> {
 	const { leagues } = await fetchMyLeagues(userId);
-	const playable = leagues.filter((league) => !league.is_public_demo);
-	if (playable.length === 1) {
-		return `${basePath}/league/${playable[0].id}`;
-	}
-	return `${basePath}/leagues`;
+	return getSolePlayableLeaguePath(leagues, basePath) ?? `${basePath}/leagues`;
 }
 
 export async function createLeague(
