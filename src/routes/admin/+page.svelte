@@ -4,6 +4,7 @@
 	import { isAppAdmin } from '$lib/admin';
 	import {
 		adminDeleteUser,
+		adminSetLeagueProfilePictures,
 		adminUpdateUser,
 		fetchAdminLeagues,
 		fetchAdminUsers,
@@ -25,9 +26,12 @@
 	let deleteError = $state<string | null>(null);
 	let editingUserId = $state<string | null>(null);
 	let editDisplayName = $state('');
+	let editAvatarKey = $state('');
 	let editCanChangeDisplayName = $state(true);
 	let savingUserId = $state<string | null>(null);
 	let editError = $state<string | null>(null);
+	let togglingLeagueId = $state<string | null>(null);
+	let leagueToggleError = $state<string | null>(null);
 
 	$effect(() => {
 		if (auth.loading) return;
@@ -53,6 +57,7 @@
 	function openEditUser(user: AdminUserRow) {
 		editingUserId = user.user_id;
 		editDisplayName = user.display_name;
+		editAvatarKey = user.avatar_key ?? '';
 		editCanChangeDisplayName = user.can_change_display_name;
 		editError = null;
 	}
@@ -74,7 +79,13 @@
 		savingUserId = user.user_id;
 		editError = null;
 
-		const result = await adminUpdateUser(user.user_id, trimmed, editCanChangeDisplayName);
+		const avatarKey = editAvatarKey.trim();
+		const result = await adminUpdateUser(
+			user.user_id,
+			trimmed,
+			editCanChangeDisplayName,
+			avatarKey
+		);
 		savingUserId = null;
 
 		if (result.error) {
@@ -87,6 +98,7 @@
 				? {
 						...row,
 						display_name: trimmed,
+						avatar_key: avatarKey || null,
 						can_change_display_name: editCanChangeDisplayName
 					}
 				: row
@@ -98,6 +110,25 @@
 		}
 
 		editingUserId = null;
+	}
+
+	async function handleToggleProfilePictures(league: AdminLeagueRow, enabled: boolean) {
+		if (togglingLeagueId) return;
+
+		togglingLeagueId = league.id;
+		leagueToggleError = null;
+
+		const result = await adminSetLeagueProfilePictures(league.id, enabled);
+		togglingLeagueId = null;
+
+		if (result.error) {
+			leagueToggleError = result.error;
+			return;
+		}
+
+		leagues = leagues.map((row) =>
+			row.id === league.id ? { ...row, show_profile_pictures: enabled } : row
+		);
 	}
 
 	async function handleDeleteUser(user: AdminUserRow) {
@@ -166,12 +197,15 @@
 		{:else}
 			<section class="card">
 				<h2 class="section-title">Leagues</h2>
+				{#if leagueToggleError}
+					<p class="auth-error" role="alert">{leagueToggleError}</p>
+				{/if}
 				{#if leagues.length === 0}
 					<p class="muted">No leagues found.</p>
 				{:else}
 					<ul class="directory-list">
 						{#each leagues as league (league.id)}
-							<li>
+							<li class="league-row">
 								<a href="{base}/league/{league.id}" class="directory-link">
 									<div class="directory-main">
 										<span class="directory-name">{league.name}</span>
@@ -189,6 +223,24 @@
 										{/if}
 									</div>
 								</a>
+								<div class="league-actions">
+									<a href="{base}/admin/league/{league.id}/audit" class="btn btn-ghost btn-sm">
+										Audit log
+									</a>
+									<label class="league-toggle">
+										<input
+											type="checkbox"
+											checked={league.show_profile_pictures}
+											disabled={togglingLeagueId === league.id}
+											onchange={(event) =>
+												handleToggleProfilePictures(
+													league,
+													(event.currentTarget as HTMLInputElement).checked
+												)}
+										/>
+										<span>Profile pics</span>
+									</label>
+								</div>
 							</li>
 						{/each}
 					</ul>
@@ -261,6 +313,19 @@
 											disabled={savingUserId === user.user_id}
 											required
 										/>
+
+										<label class="edit-label" for="edit-avatar-{user.user_id}">Avatar file</label>
+										<input
+											id="edit-avatar-{user.user_id}"
+											type="text"
+											bind:value={editAvatarKey}
+											placeholder="Ben.png"
+											disabled={savingUserId === user.user_id}
+										/>
+										<p class="edit-hint muted">
+											File in static/avatars/ (e.g. Ben.png). Tied to this account, not display name.
+											Leave blank to clear.
+										</p>
 
 										<label class="edit-toggle">
 											<input
@@ -373,6 +438,57 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.55rem;
+	}
+
+	.league-row {
+		display: flex;
+		align-items: stretch;
+		gap: 0.65rem;
+	}
+
+	.league-row .directory-link {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.league-actions {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.45rem;
+	}
+
+	.league-actions .btn {
+		justify-content: center;
+		white-space: nowrap;
+	}
+
+	.league-toggle {
+		display: inline-flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.2rem;
+		padding: 0.55rem 0.65rem;
+		border-radius: var(--radius);
+		background: var(--surface-2);
+		box-shadow: var(--shadow-sm);
+		font-size: 0.72rem;
+		font-weight: 600;
+		color: var(--text-muted);
+		cursor: pointer;
+		user-select: none;
+		white-space: nowrap;
+	}
+
+	.league-toggle input {
+		width: 0.95rem;
+		height: 0.95rem;
+		accent-color: var(--brand);
+	}
+
+	.league-toggle:has(input:checked) {
+		color: var(--text);
 	}
 
 	.directory-link,
@@ -508,7 +624,8 @@
 		color: var(--text-muted);
 	}
 
-	.user-edit-form input[type='text'] {
+	.user-edit-form input[type='text'],
+	.user-edit-form input[type='url'] {
 		padding: 0.55rem 0.65rem;
 		border: none;
 		border-radius: var(--radius);
@@ -517,6 +634,11 @@
 		font-size: 0.95rem;
 		font-family: var(--font-body);
 		box-shadow: var(--shadow-sm);
+	}
+
+	.edit-hint {
+		margin: -0.15rem 0 0;
+		font-size: 0.78rem;
 	}
 
 	.edit-toggle {

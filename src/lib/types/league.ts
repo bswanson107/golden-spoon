@@ -12,6 +12,7 @@ export type League = {
 	underdog_threshold_pct: number;
 	tiebreaker_mode: TiebreakerMode;
 	pick_visibility: PickVisibility;
+	show_profile_pictures: boolean;
 };
 
 export type LeagueMembership = {

@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import { useAuth } from '$lib/auth';
-	import { fetchMyLeagues, getPlayableLeagues, getSolePlayableLeaguePath } from '$lib/leagues';
+	import { fetchMyLeagues, getPlayableLeagues } from '$lib/leagues';
 	import { isDemoSeason } from '$lib/season';
 	import type { LeagueWithRole } from '$lib/types/league';
 
@@ -33,11 +32,6 @@
 			leagues = result.leagues;
 			error = result.error;
 			loading = false;
-
-			const solePath = getSolePlayableLeaguePath(result.leagues, base);
-			if (solePath && !result.error) {
-				goto(solePath, { replaceState: true });
-			}
 		});
 	});
 </script>

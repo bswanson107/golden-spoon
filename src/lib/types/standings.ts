@@ -3,6 +3,7 @@ export type PickOutcome = 'pending' | 'win' | 'loss' | 'tie' | 'missed' | 'void'
 export type StandingRow = {
 	user_id: string;
 	display_name: string;
+	avatar_key?: string | null;
 	total_points: number;
 	tiebreaker_picked_team_wins: number;
 	pending_picks: number;

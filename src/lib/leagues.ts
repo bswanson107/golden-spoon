@@ -16,7 +16,7 @@ export type CreateLeagueRules = {
 };
 
 const LEAGUE_SELECT =
-	'id, name, season_year, commissioner_id, invite_code, is_active, is_public_demo, created_at, underdog_threshold_pct, tiebreaker_mode, pick_visibility';
+	'id, name, season_year, commissioner_id, invite_code, is_active, is_public_demo, show_profile_pictures, created_at, underdog_threshold_pct, tiebreaker_mode, pick_visibility';
 
 /** Seeded 2025 Scaglione Family Pool — public demo, no invite required. */
 export const PUBLIC_DEMO_LEAGUE_ID = 'b0000001-0000-4000-8000-000000000001';
@@ -102,6 +102,7 @@ function asLeagueWithRole(
 	return {
 		...league,
 		is_public_demo: Boolean(league.is_public_demo),
+		show_profile_pictures: Boolean(league.show_profile_pictures),
 		is_commissioner: Boolean(userId) && league.commissioner_id === userId,
 		is_member: isMember,
 		joined_at: joinedAt
@@ -147,7 +148,8 @@ export async function fetchMyLeagues(userId: string): Promise<{
 		.filter((league): league is LeagueWithRole => league !== null)
 		.map((league) => ({
 			...league,
-			is_public_demo: Boolean(league.is_public_demo)
+			is_public_demo: Boolean(league.is_public_demo),
+			show_profile_pictures: Boolean(league.show_profile_pictures)
 		}));
 
 	// Public demo is listed for every signed-in user without adding them as members.

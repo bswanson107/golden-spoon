@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import MemberAvatar from '$lib/components/MemberAvatar.svelte';
 	import type { StandingRow } from '$lib/types/standings';
 	import {
 		DEFAULT_TIEBREAKER_MODE,
@@ -12,6 +13,7 @@
 		standings,
 		currentUserId = null,
 		tiebreakerMode = DEFAULT_TIEBREAKER_MODE,
+		showProfilePictures = false,
 		adminKickEnabled = false,
 		commissionerId = null,
 		kickingUserId = null,
@@ -21,6 +23,7 @@
 		standings: StandingRow[];
 		currentUserId?: string | null;
 		tiebreakerMode?: TiebreakerMode | string;
+		showProfilePictures?: boolean;
 		adminKickEnabled?: boolean;
 		commissionerId?: string | null;
 		kickingUserId?: string | null;
@@ -98,6 +101,9 @@
 					<td class="col-rank">{row.standing_rank}</td>
 					<td class="col-player">
 						<span class="name-row">
+							{#if showProfilePictures}
+								<MemberAvatar name={row.display_name} avatarKey={row.avatar_key} size={26} />
+							{/if}
 							<span class="name-text">
 								{row.display_name}
 								{#if showLeaderCrowns && row.standing_rank === 1}

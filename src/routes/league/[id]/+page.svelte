@@ -613,6 +613,7 @@
 					standings={leagueView.standings}
 					currentUserId={isPublicDemo ? null : (auth.user?.id ?? null)}
 					tiebreakerMode={rulesTiebreakerMode}
+					showProfilePictures={Boolean(league.show_profile_pictures)}
 					adminKickEnabled={adminToolsEnabled}
 					commissionerId={league.commissioner_id}
 					{kickingUserId}
@@ -653,6 +654,7 @@
 					picks={leagueView.picks}
 					standings={leagueView.standings}
 					currentUserId={isPublicDemo ? null : (auth.user?.id ?? null)}
+					showProfilePictures={Boolean(league.show_profile_pictures)}
 					viewWeek={null}
 					maxWeek={isDemo ? leagueView.maxVisibleWeek : gridMaxWeek}
 					pickSubmissions={visiblePickSubmissions}

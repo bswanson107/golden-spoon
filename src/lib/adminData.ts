@@ -9,6 +9,7 @@ export type AdminLeagueRow = {
 	member_count: number;
 	is_public_demo: boolean;
 	is_active: boolean;
+	show_profile_pictures: boolean;
 	created_at: string;
 };
 
@@ -20,10 +21,27 @@ export type AdminUserLeague = {
 	is_public_demo: boolean;
 };
 
+export type AdminPickAuditRow = {
+	id: string;
+	user_id: string;
+	display_name: string;
+	week_number: number;
+	season_year: number;
+	action: 'picked' | 'changed' | 'cleared';
+	team_id: string | null;
+	team_abbreviation: string | null;
+	team_name: string | null;
+	previous_team_id: string | null;
+	previous_team_abbreviation: string | null;
+	previous_team_name: string | null;
+	created_at: string;
+};
+
 export type AdminUserRow = {
 	user_id: string;
 	email: string;
 	display_name: string;
+	avatar_key: string | null;
 	can_change_display_name: boolean;
 	created_at: string;
 	leagues: AdminUserLeague[];
@@ -56,7 +74,8 @@ export async function fetchAdminLeagues(): Promise<{
 
 	const leagues = ((data ?? []) as AdminLeagueRow[]).map((row) => ({
 		...row,
-		member_count: Number(row.member_count)
+		member_count: Number(row.member_count),
+		show_profile_pictures: Boolean(row.show_profile_pictures)
 	}));
 
 	return { leagues, error: null };
@@ -77,6 +96,7 @@ export async function fetchAdminUsers(): Promise<{
 
 	const users = ((data ?? []) as AdminUserRow[]).map((row) => ({
 		...row,
+		avatar_key: row.avatar_key ?? null,
 		can_change_display_name: row.can_change_display_name !== false,
 		leagues: Array.isArray(row.leagues) ? row.leagues : []
 	}));
@@ -87,22 +107,77 @@ export async function fetchAdminUsers(): Promise<{
 export async function adminUpdateUser(
 	userId: string,
 	displayName: string,
-	canChangeDisplayName: boolean
+	canChangeDisplayName: boolean,
+	avatarKey: string | null = null
 ): Promise<{ error: string | null }> {
 	const { error } = await getSupabase().rpc('admin_update_user', {
 		p_user_id: userId,
 		p_display_name: displayName.trim(),
-		p_can_change_display_name: canChangeDisplayName
+		p_can_change_display_name: canChangeDisplayName,
+		p_avatar_key: avatarKey ?? ''
 	});
 
 	if (error) {
 		if (isMissingRpc(error, 'admin_update_user')) {
-			return { error: missingRpcMessage('admin_update_user', 'db:apply-admin-user-profiles') };
+			return {
+				error: missingRpcMessage('admin_update_user', 'db:apply-avatar-keys')
+			};
 		}
 		return { error: error.message };
 	}
 
 	return { error: null };
+}
+
+export async function adminSetLeagueProfilePictures(
+	leagueId: string,
+	enabled: boolean
+): Promise<{ error: string | null }> {
+	const { error } = await getSupabase().rpc('admin_set_league_profile_pictures', {
+		p_league_id: leagueId,
+		p_show_profile_pictures: enabled
+	});
+
+	if (error) {
+		if (isMissingRpc(error, 'admin_set_league_profile_pictures')) {
+			return {
+				error: missingRpcMessage(
+					'admin_set_league_profile_pictures',
+					'db:apply-league-profile-pictures'
+				)
+			};
+		}
+		return { error: error.message };
+	}
+
+	return { error: null };
+}
+
+export async function fetchAdminPickAuditLog(leagueId: string): Promise<{
+	entries: AdminPickAuditRow[];
+	error: string | null;
+}> {
+	const { data, error } = await getSupabase().rpc('admin_list_pick_audit_log', {
+		p_league_id: leagueId
+	});
+
+	if (error) {
+		if (isMissingRpc(error, 'admin_list_pick_audit_log')) {
+			return {
+				entries: [],
+				error: missingRpcMessage('admin_list_pick_audit_log', 'db:apply-pick-audit-log')
+			};
+		}
+		return { entries: [], error: error.message };
+	}
+
+	const entries = ((data ?? []) as AdminPickAuditRow[]).map((row) => ({
+		...row,
+		week_number: Number(row.week_number),
+		season_year: Number(row.season_year)
+	}));
+
+	return { entries, error: null };
 }
 
 export async function adminDeleteUser(userId: string): Promise<{ error: string | null }> {

@@ -4,6 +4,7 @@ import type { LeaguePick, PickOutcome, StandingRow } from '$lib/types/standings'
 type StandingsRpcRow = {
 	user_id: string;
 	display_name: string;
+	avatar_key: string | null;
 	total_points: number;
 	tiebreaker_picked_team_wins: number;
 	pending_picks: number;
@@ -250,6 +251,7 @@ export async function fetchLeagueStandings(leagueId: string): Promise<{
 		return {
 			user_id: row.user_id,
 			display_name: row.display_name,
+			avatar_key: row.avatar_key ?? null,
 			total_points: Number(row.total_points),
 			tiebreaker_picked_team_wins: row.tiebreaker_picked_team_wins,
 			pending_picks: row.pending_picks,

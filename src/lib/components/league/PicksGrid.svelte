@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import MemberAvatar from '$lib/components/MemberAvatar.svelte';
 	import TeamLogo from '$lib/components/TeamLogo.svelte';
 	import { qaNow } from '$lib/qaClock.svelte';
 	import {
@@ -23,6 +24,7 @@
 		picks,
 		standings = [],
 		currentUserId = null,
+		showProfilePictures = false,
 		viewWeek = null,
 		maxWeek = null,
 		pickSubmissions = {},
@@ -30,8 +32,14 @@
 		stickyTop
 	}: {
 		picks: LeaguePick[];
-		standings?: { user_id: string; display_name: string; standing_rank: number }[];
+		standings?: {
+			user_id: string;
+			display_name: string;
+			standing_rank: number;
+			avatar_key?: string | null;
+		}[];
 		currentUserId?: string | null;
+		showProfilePictures?: boolean;
 		viewWeek?: number | null;
 		/** When set (and viewWeek is null), show weeks 1..maxWeek inclusive. */
 		maxWeek?: number | null;
@@ -82,11 +90,15 @@
 	});
 
 	const players = $derived.by(() => {
-		const byUser = new Map<string, { name: string; picks: Map<number, LeaguePick> }>();
+		const byUser = new Map<
+			string,
+			{ name: string; avatarKey: string | null; picks: Map<number, LeaguePick> }
+		>();
 
 		for (const row of standings) {
 			byUser.set(normalizePickUserId(row.user_id), {
 				name: row.display_name,
+				avatarKey: row.avatar_key ?? null,
 				picks: new Map()
 			});
 		}
@@ -95,7 +107,7 @@
 			const userId = normalizePickUserId(pick.user_id);
 			let entry = byUser.get(userId);
 			if (!entry) {
-				entry = { name: pick.display_name, picks: new Map() };
+				entry = { name: pick.display_name, avatarKey: null, picks: new Map() };
 				byUser.set(userId, entry);
 			}
 			entry.picks.set(pick.week_number, pick);
@@ -192,7 +204,7 @@
 	}
 </script>
 
-<div class="picks-sticky-bar">
+<div class="picks-sticky-bar" class:with-avatars={showProfilePictures}>
 	{#if stickyTop}
 		<div class="sticky-top">
 			{@render stickyTop()}
@@ -217,7 +229,7 @@
 	</div>
 </div>
 
-<div class="grid-wrap" bind:this={bodyScrollEl} onscroll={syncHeaderFromBody}>
+<div class="grid-wrap" class:with-avatars={showProfilePictures} bind:this={bodyScrollEl} onscroll={syncHeaderFromBody}>
 	<table class="picks-grid">
 		<thead class="sr-only">
 			<tr>
@@ -231,7 +243,14 @@
 		<tbody>
 			{#each players as player (player.userId)}
 				<tr>
-					<th scope="row" class="sticky player-col">{player.name}</th>
+					<th scope="row" class="sticky player-col">
+						<span class="player-label">
+							{#if showProfilePictures}
+								<MemberAvatar name={player.name} avatarKey={player.avatarKey} size={22} />
+							{/if}
+							<span class="player-name">{player.name}</span>
+						</span>
+					</th>
 					<td class="col-gap"></td>
 					{#each weeks as week (week)}
 						{@const pick = player.picks.get(week)}
@@ -343,6 +362,11 @@
 		max-width: none;
 	}
 
+	.picks-sticky-bar.with-avatars,
+	.grid-wrap.with-avatars {
+		--picks-player-w: 9.5rem;
+	}
+
 	.picks-grid {
 		border-collapse: separate;
 		border-spacing: 0;
@@ -384,10 +408,21 @@
 		padding: 0.35rem;
 		padding-left: 1.25rem;
 		padding-right: 0.65rem;
+		background: var(--surface);
+	}
+
+	.player-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		min-width: 0;
+		max-width: 100%;
+	}
+
+	.player-name {
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		background: var(--surface);
 	}
 
 	.header-player {
