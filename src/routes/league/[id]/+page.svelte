@@ -8,8 +8,10 @@
 	import WeekNavigator from '$lib/components/pick/WeekNavigator.svelte';
 	import PickDashboard from '$lib/components/league/PickDashboard.svelte';
 	import LeagueFooter from '$lib/components/league/LeagueFooter.svelte';
+	import LeagueChatModal from '$lib/components/league/LeagueChatModal.svelte';
 	import StandingsTable from '$lib/components/league/StandingsTable.svelte';
 	import PicksGrid from '$lib/components/league/PicksGrid.svelte';
+	import { fetchLeagueChatUnreadCount } from '$lib/chat';
 	import {
 		getMaxVisibleWeek,
 		GUEST_DEMO_USER_ID,
@@ -72,6 +74,8 @@
 	let kickError = $state<string | null>(null);
 	let deletingLeague = $state(false);
 	let deleteLeagueError = $state<string | null>(null);
+	let chatOpen = $state(false);
+	let unreadCount = $state(0);
 
 	const leagueId = $derived($page.params.id);
 
@@ -81,6 +85,19 @@
 
 	const isDemo = $derived(league !== null && isDemoSeason(league.season_year));
 	const isPublicDemo = $derived(league?.is_public_demo === true);
+	const canChat = $derived(
+		league !== null &&
+			!isPublicDemo &&
+			auth.user !== null &&
+			(league.is_member || isAppAdmin(auth.user.email))
+	);
+	const chatLeagueId = $derived(canChat && league ? league.id : null);
+	const canModerateChat = $derived(
+		league !== null && (league.is_commissioner || isAppAdmin(auth.user?.email))
+	);
+	const currentUserAvatarKey = $derived(
+		standings.find((row) => row.user_id === auth.user?.id)?.avatar_key ?? null
+	);
 
 	const playerDisplayName = $derived.by(() => {
 		const user = auth.user;
@@ -500,6 +517,7 @@
 	afterNavigate(() => {
 		refreshDemoState();
 		gridRefreshToken += 1;
+		chatOpen = false;
 		if (league && !isDemoSeason(league.season_year)) {
 			void reloadLeagueData();
 		}
@@ -514,6 +532,35 @@
 			gridRefreshToken += 1;
 			void reloadLeagueData();
 		});
+	});
+
+	$effect(() => {
+		if (typeof document === 'undefined') return;
+		const id = chatLeagueId;
+		if (!id) {
+			unreadCount = 0;
+			return;
+		}
+
+		const leagueId = id;
+		let cancelled = false;
+
+		async function refreshUnread() {
+			if (document.visibilityState === 'hidden') return;
+			const result = await fetchLeagueChatUnreadCount(leagueId);
+			if (cancelled || result.error) return;
+			unreadCount = result.count;
+		}
+
+		void refreshUnread();
+		document.addEventListener('visibilitychange', refreshUnread);
+		window.addEventListener('focus', refreshUnread);
+
+		return () => {
+			cancelled = true;
+			document.removeEventListener('visibilitychange', refreshUnread);
+			window.removeEventListener('focus', refreshUnread);
+		};
 	});
 
 </script>
@@ -540,6 +587,19 @@
 					onclick={handleDeleteLeague}
 				>
 					{deletingLeague ? '…' : '×'}
+				</button>
+			{/if}
+			{#if canChat}
+				<button
+					type="button"
+					class="btn btn-ghost btn-sm chat-btn"
+					aria-label={unreadCount > 0 ? `Chat, ${unreadCount} unread` : 'Chat'}
+					onclick={() => (chatOpen = true)}
+				>
+					Chat
+					{#if unreadCount > 0}
+						<span class="chat-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+					{/if}
 				</button>
 			{/if}
 		</div>
@@ -674,6 +734,21 @@
 			picks={leagueView.picks}
 			games={liveWeekGames}
 		/>
+
+		{#if canChat && auth.user}
+			<LeagueChatModal
+				open={chatOpen}
+				leagueId={league.id}
+				leagueName={league.name}
+				currentUserId={auth.user.id}
+				currentUserDisplayName={playerDisplayName}
+				currentUserAvatarKey={currentUserAvatarKey}
+				showProfilePictures={Boolean(league.show_profile_pictures)}
+				canDeleteAny={canModerateChat}
+				onClose={() => (chatOpen = false)}
+				onRead={() => (unreadCount = 0)}
+			/>
+		{/if}
 	{/if}
 </main>
 
@@ -692,6 +767,29 @@
 
 	.league-title-row .page-title {
 		min-width: 0;
+		flex: 1;
+	}
+
+	.chat-btn {
+		position: relative;
+		margin-left: auto;
+		flex-shrink: 0;
+	}
+
+	.chat-badge {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 1.15rem;
+		height: 1.15rem;
+		padding: 0 0.28rem;
+		margin-left: 0.3rem;
+		border-radius: 999px;
+		background: var(--danger);
+		color: #fff;
+		font-size: 0.68rem;
+		font-weight: 700;
+		line-height: 1;
 	}
 
 	.delete-league-btn {
