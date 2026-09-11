@@ -44,8 +44,7 @@
 	.member-avatar {
 		display: block;
 		flex-shrink: 0;
-		border-radius: 50%;
-		object-fit: cover;
-		background: var(--surface-2);
+		object-fit: contain;
+		background: transparent;
 	}
 </style>
