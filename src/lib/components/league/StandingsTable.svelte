@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { Snippet } from 'svelte';
 	import MemberAvatar from '$lib/components/MemberAvatar.svelte';
 	import type { StandingRow } from '$lib/types/standings';
@@ -55,6 +56,29 @@
 
 	/** Mobile only; desktop always shows the TB column. Off by default. */
 	let showTiebreakers = $state(false);
+	/**
+	 * Matches the mobile CSS breakpoint where the TB column can be toggled off.
+	 * Start false to match SSR; onMount syncs to the real viewport.
+	 */
+	let isMobileViewport = $state(false);
+
+	onMount(() => {
+		const mq = window.matchMedia('(max-width: 640px)');
+		const sync = () => {
+			isMobileViewport = mq.matches;
+		};
+		sync();
+		mq.addEventListener('change', sync);
+		return () => mq.removeEventListener('change', sync);
+	});
+
+	/**
+	 * Omit the TB column from the table when it's toggled off on mobile.
+	 * Hiding via CSS (visibility:collapse / display:none on <col>) leaves a
+	 * trailing gap in Safari with table-layout:fixed; removing the column avoids that.
+	 */
+	const showTbColumn = $derived(!isMobileViewport || showTiebreakers);
+	const columnCount = $derived(showTbColumn ? 5 : 4);
 </script>
 
 <div class="standings-wrap" class:show-tb={showTiebreakers}>
@@ -65,12 +89,14 @@
 			<col class="c-player" />
 			<col class="c-num" />
 			<col class="c-num" />
-			<col class="c-tb" />
+			{#if showTbColumn}
+				<col class="c-tb" />
+			{/if}
 		</colgroup>
 		<thead>
 			{#if stickyTop}
 				<tr class="title-row">
-					<th colspan="5" scope="colgroup">
+					<th colspan={columnCount} scope="colgroup">
 						<div class="sticky-top">
 							<div class="title-with-toggle">
 								<div class="title-copy">
@@ -80,7 +106,7 @@
 									<input
 										type="checkbox"
 										bind:checked={showTiebreakers}
-										aria-controls="standings-tb-col"
+										aria-controls={showTbColumn ? 'standings-tb-col' : undefined}
 									/>
 									<span>Show Tiebreakers</span>
 								</label>
@@ -100,15 +126,17 @@
 				<th scope="col" class="col-player">Player</th>
 				<th scope="col" class="col-num">Pts</th>
 				<th scope="col" class="col-num">W-L</th>
-				<th scope="col" class="col-num col-tb" id="standings-tb-col">
-					<span
-						class="tb-label"
-						title={tiebreakerHint(resolvedTiebreaker)}
-						aria-label={tiebreakerHint(resolvedTiebreaker)}
-						data-tooltip="Tiebreaker"
-						tabindex="0"
-					>TB</span>
-				</th>
+				{#if showTbColumn}
+					<th scope="col" class="col-num col-tb" id="standings-tb-col">
+						<span
+							class="tb-label"
+							title={tiebreakerHint(resolvedTiebreaker)}
+							aria-label={tiebreakerHint(resolvedTiebreaker)}
+							data-tooltip="Tiebreaker"
+							tabindex="0"
+						>TB</span>
+					</th>
+				{/if}
 			</tr>
 		</thead>
 		<tbody>
@@ -149,9 +177,11 @@
 						>{row.total_points.toFixed(1)}</td
 					>
 					<td class="col-num" data-testid="standings-record">{formatRecord(row)}</td>
-					<td class="col-num col-tb tb" data-testid="standings-tb"
-						>{row.tiebreaker_picked_team_wins}</td
-					>
+					{#if showTbColumn}
+						<td class="col-num col-tb tb" data-testid="standings-tb"
+							>{row.tiebreaker_picked_team_wins}</td
+						>
+					{/if}
 				</tr>
 			{/each}
 		</tbody>
@@ -336,6 +366,12 @@
 			display: none;
 		}
 
+		/* Pre-hydration fallback: hide TB until matchMedia removes the column from the DOM. */
+		.standings-wrap:not(.show-tb) .c-tb,
+		.standings-wrap:not(.show-tb) .col-tb {
+			display: none;
+		}
+
 		.c-rank {
 			width: 1.6rem;
 		}
@@ -346,18 +382,6 @@
 
 		.c-tb {
 			width: 2.5rem;
-		}
-
-		.standings-wrap:not(.show-tb) .c-tb {
-			width: 0;
-			visibility: collapse;
-		}
-
-		.standings-wrap:not(.show-tb) .col-tb {
-			display: none;
-			width: 0;
-			padding: 0;
-			border: none;
 		}
 
 		.col-rank,
