@@ -704,6 +704,17 @@
 		justify-self: stretch;
 	}
 
+	@media (min-width: 48rem) {
+		.app.has-league-nav .header-inner {
+			grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+		}
+
+		.app.has-league-nav .header-center {
+			justify-content: center;
+			justify-self: center;
+		}
+	}
+
 	.demo-exit-nav,
 	.home-leagues-nav {
 		display: flex;

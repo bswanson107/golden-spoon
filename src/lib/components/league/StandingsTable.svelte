@@ -86,7 +86,8 @@
 								</label>
 							</div>
 							<p class="muted tb-explain">
-								Tiebreaker: sum of picked teams' season wins ({resolvedTiebreaker === 'most_wins'
+								Tiebreaker: live sum of picked teams' current season wins ({resolvedTiebreaker ===
+								'most_wins'
 									? 'higher'
 									: 'lower'} is better).
 							</p>
@@ -148,7 +149,9 @@
 						>{row.total_points.toFixed(1)}</td
 					>
 					<td class="col-num" data-testid="standings-record">{formatRecord(row)}</td>
-					<td class="col-num col-tb tb">{row.tiebreaker_picked_team_wins}</td>
+					<td class="col-num col-tb tb" data-testid="standings-tb"
+						>{row.tiebreaker_picked_team_wins}</td
+					>
 				</tr>
 			{/each}
 		</tbody>

@@ -139,12 +139,24 @@
 		};
 	});
 
+	const gridDisplayWeek = $derived(
+		isDemo ? (leagueView.maxVisibleWeek ?? 0) : (gridMaxWeek ?? 1)
+	);
+
+	const gridPicks = $derived(
+		leagueView.picks.filter((pick) => pick.week_number >= 1 && pick.week_number <= gridDisplayWeek)
+	);
+
 	const visiblePickSubmissions = $derived.by(() => {
 		const user = auth.user;
-		if (!isPublicDemo || !user) return pickSubmissions;
-		const prefix = `${user.id.toLowerCase()}:`;
+		const prefix = isPublicDemo && user ? `${user.id.toLowerCase()}:` : null;
 		return Object.fromEntries(
-			Object.entries(pickSubmissions).filter(([key]) => !key.startsWith(prefix))
+			Object.entries(pickSubmissions).filter(([key]) => {
+				if (prefix && key.startsWith(prefix)) return false;
+				const separator = key.lastIndexOf(':');
+				const week = separator === -1 ? 0 : Number(key.slice(separator + 1));
+				return week >= 1 && week <= gridDisplayWeek;
+			})
 		);
 	});
 
@@ -451,7 +463,6 @@
 		void isQaClockEnabled();
 		void gridRefreshToken;
 		if (!leagueData || isDemoSeason(leagueData.season_year)) {
-			gridMaxWeek = null;
 			return;
 		}
 
@@ -699,17 +710,17 @@
 		</section>
 
 		<section class="card">
-			{#if leagueView.picks.length === 0 && Object.keys(visiblePickSubmissions).length === 0}
+			{#if gridPicks.length === 0 && Object.keys(visiblePickSubmissions).length === 0}
 				<h2 class="card-title">Weekly picks</h2>
 				<p class="muted">No picks yet.</p>
 			{:else}
 				<PicksGrid
-					picks={leagueView.picks}
+					picks={gridPicks}
 					standings={leagueView.standings}
 					currentUserId={isPublicDemo ? null : (auth.user?.id ?? null)}
 					showProfilePictures={Boolean(league.show_profile_pictures)}
 					viewWeek={null}
-					maxWeek={isDemo ? leagueView.maxVisibleWeek : gridMaxWeek}
+					maxWeek={gridDisplayWeek}
 					pickSubmissions={visiblePickSubmissions}
 					pickVisibility={rulesPickVisibility}
 				>

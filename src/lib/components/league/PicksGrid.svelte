@@ -81,8 +81,11 @@
 			return inRegularSeason(week) ? [week] : [];
 		}
 
-		if (maxWeek !== null && maxWeek > 0) {
-			const capped = Math.min(maxWeek, REGULAR_SEASON_WEEKS);
+		// Cap at the current week so future planned picks (e.g. week 2 during week 1)
+		// never add extra columns. maxWeek 0 = no completed weeks yet.
+		if (maxWeek !== null) {
+			const capped = Math.min(Math.max(0, maxWeek), REGULAR_SEASON_WEEKS);
+			if (capped <= 0) return [];
 			return Array.from({ length: capped }, (_, i) => i + 1);
 		}
 

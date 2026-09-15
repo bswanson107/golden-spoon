@@ -25,14 +25,14 @@ export function tiebreakerShortLabel(_mode: TiebreakerMode): string {
 
 export function tiebreakerHint(mode: TiebreakerMode): string {
 	return mode === 'most_wins'
-		? 'Tiebreaker: higher cumulative season wins of picked teams ranks higher'
-		: 'Tiebreaker: lower cumulative season wins of picked teams ranks higher';
+		? 'Tiebreaker: higher live season-win total of picked teams ranks higher'
+		: 'Tiebreaker: lower live season-win total of picked teams ranks higher';
 }
 
 export function tiebreakerDescription(mode: TiebreakerMode): string {
 	return mode === 'most_wins'
-		? 'If tied on points, the player with the higher cumulative season wins of their picked teams ranks higher — rewarding success with stronger teams.'
-		: 'If tied on points, the player with the lower cumulative season wins of their picked teams ranks higher — rewarding success with weaker teams.';
+		? 'If tied on points, the player with the higher live sum of current season wins of the NFL teams they have picked ranks higher — rewarding success with stronger teams.'
+		: 'If tied on points, the player with the lower live sum of current season wins of the NFL teams they have picked ranks higher — rewarding success with weaker teams.';
 }
 
 export function pickVisibilityDescription(mode: PickVisibility): string {

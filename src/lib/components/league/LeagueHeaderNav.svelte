@@ -300,6 +300,26 @@
 		background: var(--brand);
 	}
 
+	@media (min-width: 48rem) {
+		.league-header-nav {
+			align-items: center;
+			width: auto;
+			max-width: min(100%, 24rem);
+		}
+
+		.league-switcher {
+			justify-content: center;
+		}
+
+		.league-name-btn {
+			justify-content: center;
+		}
+
+		.league-tabs {
+			justify-content: center;
+		}
+	}
+
 	@media (max-width: 420px) {
 		.league-name-btn {
 			font-size: 0.85rem;

@@ -246,6 +246,27 @@ export function getMaxVisibleWeek(simulatedWeek: number): number {
 	return Math.max(0, regularSeasonWeek(simulatedWeek) - 1);
 }
 
+function pickCountsTowardTiebreaker(pick: LeaguePick): boolean {
+	if (pick.is_missed) return false;
+	return pick.outcome === 'win' || pick.outcome === 'loss' || pick.outcome === 'tie';
+}
+
+/** Current regular-season wins through a visible week (demo time travel). */
+function teamWinsThroughWeek(
+	gamesByWeek: Map<number, WeekGame[]>,
+	maxVisibleWeek: number
+): Map<string, number> {
+	const wins = new Map<string, number>();
+	for (const [week, games] of gamesByWeek) {
+		if (week < 1 || week > maxVisibleWeek) continue;
+		for (const game of games) {
+			if (game.status !== 'final' || game.is_tie || !game.winner_team_id) continue;
+			wins.set(game.winner_team_id, (wins.get(game.winner_team_id) ?? 0) + 1);
+		}
+	}
+	return wins;
+}
+
 function recordFromPicksForStandings(
 	picks: LeaguePick[]
 ): Pick<StandingRow, 'wins' | 'losses' | 'ties'> {
@@ -296,7 +317,9 @@ function buildStandingsFromPicks(
 	userId: string,
 	displayName: string,
 	tiebreakerMode: TiebreakerMode = DEFAULT_TIEBREAKER_MODE,
-	includeViewer = true
+	includeViewer = true,
+	gamesByWeek: Map<number, WeekGame[]> = new Map(),
+	maxVisibleWeek = 0
 ): StandingRow[] {
 	const picksByUser = new Map<string, LeaguePick[]>();
 	for (const pick of picks) {
@@ -315,14 +338,16 @@ function buildStandingsFromPicks(
 		userIds.delete(userId);
 	}
 
+	const teamWins = teamWinsThroughWeek(gamesByWeek, maxVisibleWeek);
+
 	const rows: StandingRow[] = [...userIds].map((uid) => {
 		const userPicks = picksByUser.get(uid) ?? [];
 		const total_points = userPicks.reduce((sum, pick) => sum + Number(pick.points_awarded), 0);
 		const pending_picks = userPicks.filter((pick) => pick.outcome === 'pending').length;
-		const tiebreaker_picked_team_wins = userPicks.reduce(
-			(sum, pick) => sum + (pick.team_season_wins_at_pick ?? 0),
-			0
-		);
+		const tiebreaker_picked_team_wins = userPicks.reduce((sum, pick) => {
+			if (!pickCountsTowardTiebreaker(pick)) return sum;
+			return sum + (teamWins.get(pick.team_id) ?? 0);
+		}, 0);
 
 		return {
 			user_id: uid,
@@ -407,7 +432,9 @@ export function mergeDemoLeagueView(
 		userId,
 		displayName,
 		resolvedTiebreaker,
-		includeViewer
+		includeViewer,
+		gamesByWeek,
+		maxVisibleWeek
 	);
 
 	return { picks: mergedPicks, standings, maxVisibleWeek };
