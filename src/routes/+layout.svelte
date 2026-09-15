@@ -574,8 +574,10 @@
 	}
 
 	.app.has-league-nav .header-inner {
+		grid-template-columns: auto minmax(0, 1fr) auto;
 		padding-top: 0.35rem;
 		padding-bottom: 0.35rem;
+		gap: 0.5rem;
 	}
 
 	.brand-block {
@@ -695,6 +697,11 @@
 		justify-self: center;
 		min-width: 0;
 		align-self: stretch;
+	}
+
+	.app.has-league-nav .header-center {
+		justify-content: flex-start;
+		justify-self: stretch;
 	}
 
 	.demo-exit-nav,
@@ -907,6 +914,10 @@
 	@media (max-width: 420px) {
 		.header-inner {
 			gap: 0.25rem;
+		}
+
+		.app.has-league-nav .header-inner {
+			gap: 0.45rem;
 		}
 
 		.season-indicator {

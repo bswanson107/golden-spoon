@@ -661,8 +661,6 @@
 							(no completed weeks yet)
 						{/if}
 					</p>
-				{:else}
-					<p class="muted">Ranked by total points. Tiebreaker = sum of picked teams' season wins (lower is better).</p>
 				{/if}
 				{#if kickError}
 					<p class="auth-error" role="alert">{kickError}</p>
@@ -690,11 +688,6 @@
 								{:else}
 									(no completed weeks yet)
 								{/if}
-							</p>
-						{:else}
-							<p class="muted">
-								Ranked by total points. Tiebreaker = sum of picked teams' season wins (lower is
-								better).
 							</p>
 						{/if}
 						{#if kickError}

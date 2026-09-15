@@ -140,9 +140,10 @@
 	.league-header-nav {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
+		align-items: flex-start;
 		justify-content: center;
 		align-self: stretch;
+		width: 100%;
 		min-width: 0;
 		gap: 0.15rem;
 	}
@@ -150,16 +151,17 @@
 	.league-switcher {
 		position: relative;
 		display: flex;
-		justify-content: center;
+		justify-content: flex-start;
 		max-width: 100%;
 	}
 
 	.league-name-btn {
 		display: inline-flex;
 		align-items: center;
-		justify-content: center;
+		justify-content: flex-start;
 		gap: 0.3rem;
 		max-width: 100%;
+		min-width: 0;
 		margin: 0;
 		padding: 0.15rem 0.35rem;
 		border: none;
@@ -187,7 +189,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		max-width: min(18rem, calc(100vw - 11rem));
+		min-width: 0;
 	}
 
 	.league-chevron {
@@ -204,8 +206,7 @@
 	.league-menu {
 		position: absolute;
 		top: calc(100% + 0.35rem);
-		left: 50%;
-		transform: translateX(-50%);
+		left: 0;
 		z-index: 60;
 		min-width: max(100%, 12rem);
 		max-width: min(18rem, calc(100vw - 1.5rem));
@@ -261,7 +262,7 @@
 	.league-tabs {
 		display: flex;
 		align-items: stretch;
-		justify-content: center;
+		justify-content: flex-start;
 		gap: 0.15rem;
 	}
 
@@ -300,8 +301,7 @@
 	}
 
 	@media (max-width: 420px) {
-		.league-name {
-			max-width: min(12rem, calc(100vw - 9.5rem));
+		.league-name-btn {
 			font-size: 0.85rem;
 		}
 

@@ -28,8 +28,8 @@
 		<div class="btn-row">
 			{#if !auth.loading && !auth.user}
 				<a href="{base}/signup" class="hero-btn hero-btn-secondary">Create an account</a>
+				<a href="{base}/league/{PUBLIC_DEMO_LEAGUE_ID}" class="hero-btn hero-btn-primary">View Demo</a>
 			{/if}
-			<a href="{base}/league/{PUBLIC_DEMO_LEAGUE_ID}" class="hero-btn hero-btn-primary">View Demo</a>
 		</div>
 		{#if !auth.loading && !auth.user}
 			<p class="hero-note">(No email verification needed)</p>

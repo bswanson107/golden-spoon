@@ -40,7 +40,7 @@
 	<div class="page-header">
 		<div>
 			<h1 class="page-title">My leagues</h1>
-			<p class="page-subtitle">Create a pool, join with an invite code, or try the demo.</p>
+			<p class="page-subtitle">Create a pool or join with an invite code.</p>
 		</div>
 	</div>
 

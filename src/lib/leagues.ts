@@ -150,38 +150,11 @@ export async function fetchMyLeagues(userId: string): Promise<{
 			...league,
 			is_public_demo: Boolean(league.is_public_demo),
 			show_profile_pictures: Boolean(league.show_profile_pictures)
-		}));
+		}))
+		.filter((league) => !league.is_public_demo)
+		.sort((a, b) => new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime());
 
-	// Public demo is listed for every signed-in user without adding them as members.
-	const { data: publicDemos, error: demoError } = await supabase
-		.from('leagues')
-		.select(LEAGUE_SELECT)
-		.eq('is_public_demo', true)
-		.eq('is_active', true);
-
-	if (demoError && demoError.message.includes('is_public_demo') && demoSetup.error) {
-		return { leagues: [], error: demoSetup.error };
-	}
-
-	const byId = new Map(leagues.map((league) => [league.id, league]));
-	for (const row of publicDemos ?? []) {
-		const league = row as League;
-		if (byId.has(league.id)) continue;
-		byId.set(
-			league.id,
-			asLeagueWithRole(league, userId, league.created_at)
-		);
-	}
-
-	const merged = [...byId.values()].sort((a, b) => {
-		// Keep public demos easy to find at the top.
-		if (a.is_public_demo !== b.is_public_demo) {
-			return a.is_public_demo ? -1 : 1;
-		}
-		return new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime();
-	});
-
-	return { leagues: merged, error: null };
+	return { leagues, error: null };
 }
 
 /** Leagues the user actually joined, excluding the public demo. */

@@ -52,9 +52,12 @@
 		if (commissionerId !== null && row.user_id === commissionerId) return false;
 		return true;
 	}
+
+	/** Mobile only; desktop always shows the TB column. Off by default. */
+	let showTiebreakers = $state(false);
 </script>
 
-<div class="standings-wrap">
+<div class="standings-wrap" class:show-tb={showTiebreakers}>
 	<table class="standings">
 		<!-- colgroup beats the colspan title row for fixed-layout column widths -->
 		<colgroup>
@@ -69,7 +72,24 @@
 				<tr class="title-row">
 					<th colspan="5" scope="colgroup">
 						<div class="sticky-top">
-							{@render stickyTop()}
+							<div class="title-with-toggle">
+								<div class="title-copy">
+									{@render stickyTop()}
+								</div>
+								<label class="tb-toggle">
+									<input
+										type="checkbox"
+										bind:checked={showTiebreakers}
+										aria-controls="standings-tb-col"
+									/>
+									<span>Show Tiebreakers</span>
+								</label>
+							</div>
+							<p class="muted tb-explain">
+								Tiebreaker: sum of picked teams' season wins ({resolvedTiebreaker === 'most_wins'
+									? 'higher'
+									: 'lower'} is better).
+							</p>
 						</div>
 					</th>
 				</tr>
@@ -79,7 +99,7 @@
 				<th scope="col" class="col-player">Player</th>
 				<th scope="col" class="col-num">Pts</th>
 				<th scope="col" class="col-num">W-L</th>
-				<th scope="col" class="col-num col-tb">
+				<th scope="col" class="col-num col-tb" id="standings-tb-col">
 					<span
 						class="tb-label"
 						title={tiebreakerHint(resolvedTiebreaker)}
@@ -182,12 +202,58 @@
 		background: var(--surface);
 	}
 
+	.title-with-toggle {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+
+	.title-copy {
+		min-width: 0;
+		flex: 1;
+	}
+
+	.tb-toggle {
+		display: none;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		gap: 0.35rem;
+		flex-shrink: 0;
+		margin-top: 0.1rem;
+		padding: 0.35rem 0.45rem;
+		border-radius: var(--radius);
+		background: var(--surface-2);
+		box-shadow: var(--shadow-sm);
+		font-size: 0.68rem;
+		font-weight: 600;
+		color: var(--text-muted);
+		cursor: pointer;
+		user-select: none;
+		white-space: nowrap;
+	}
+
+	.tb-toggle input {
+		width: 0.9rem;
+		height: 0.9rem;
+		accent-color: var(--brand);
+	}
+
+	.standings-wrap.show-tb .tb-toggle {
+		color: var(--text);
+	}
+
 	.sticky-top :global(.card-title) {
 		margin: 0 0 0.35rem;
 	}
 
 	.sticky-top :global(.muted) {
 		margin: 0 0 0.75rem;
+	}
+
+	.sticky-top .tb-explain {
+		margin: 0.55rem 0 0;
 	}
 
 	.sticky-top :global(.muted:last-child),
@@ -259,6 +325,14 @@
 	}
 
 	@media (max-width: 640px) {
+		.tb-toggle {
+			display: inline-flex;
+		}
+
+		.standings-wrap:not(.show-tb) .tb-explain {
+			display: none;
+		}
+
 		.c-rank {
 			width: 1.6rem;
 		}
@@ -269,6 +343,18 @@
 
 		.c-tb {
 			width: 2.5rem;
+		}
+
+		.standings-wrap:not(.show-tb) .c-tb {
+			width: 0;
+			visibility: collapse;
+		}
+
+		.standings-wrap:not(.show-tb) .col-tb {
+			display: none;
+			width: 0;
+			padding: 0;
+			border: none;
 		}
 
 		.col-rank,
