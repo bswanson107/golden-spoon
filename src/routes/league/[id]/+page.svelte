@@ -9,6 +9,7 @@
 	import PickDashboard from '$lib/components/league/PickDashboard.svelte';
 	import LeagueFooter from '$lib/components/league/LeagueFooter.svelte';
 	import LeagueChatModal from '$lib/components/league/LeagueChatModal.svelte';
+	import SponsorAdHost from '$lib/components/league/SponsorAdHost.svelte';
 	import StandingsTable from '$lib/components/league/StandingsTable.svelte';
 	import PicksGrid from '$lib/components/league/PicksGrid.svelte';
 	import { fetchLeagueChatUnreadCount } from '$lib/chat';
@@ -738,6 +739,10 @@
 			picks={leagueView.picks}
 			games={liveWeekGames}
 		/>
+
+		{#if league.show_parody_sponsorships}
+			<SponsorAdHost />
+		{/if}
 
 		{#if canChat && auth.user}
 			<LeagueChatModal

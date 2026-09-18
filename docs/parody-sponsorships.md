@@ -1,76 +1,101 @@
-# Parody sponsorships — parked
+# Parody sponsorships
 
-A first pass at in-app parody ads was built and then **fully reverted from the app**. Shipping it made Golden Spoon take far too long to load. We should not turn this back on until we have a more efficient approach.
+Lightweight in-app parody ads for Golden Spoon. Enabled per league via the Admin **Parody ads** toggle (`leagues.show_parody_sponsorships`, default off).
 
-## What we created (and removed)
+## What ships
 
-- Per-league **Parody ads** toggle in Admin (database flag `show_parody_sponsorships`, default off)
-- Rotating, dismissible ads on league overview and pick pages
-- Mix of bottom **banners** and **popup modals**
-- Shuffled order per browser session; dismissed ads stayed gone until the tab closed
-- Sponsors: Swenson’s Drive-In, Great Lakes Brewing Co., SCAG Power Equipment, Italo’s Pizza, Goodyear (blimp art)
+- Dismissible bottom **banners** (common) and occasional **popup modals**
+- Random sponsor + random promo line from the copy bank below
+- First impression ~60s after the page is idle; at most 3 per tab session
+- Footer **Thank you to our sponsors** logo grid on league pages (same toggle)
+- Display assets are small WebP files under `static/sponsors/` (`*-128.webp` for the footer, `*-256.webp` for ads)
 
-That implementation loaded the creatives as full static PNGs on league routes. The original Goodyear file was ~13MB; Italo’s was ~2MB. Even after squaring/downsampling the images, the feature was too heavy for how this app loads. **We need a new solution that is more efficient** — for example: much smaller WebP/AVIF assets, lazy-load only after the league UI is interactive, do not import ad UI on every league page, and never block first paint on sponsor files.
+## Performance rules (do not break these)
 
-If migration `039_parody_sponsorships` was already applied to a database, drop the unused flag:
+The first attempt loaded full-size PNGs (Goodyear ~13MB, Italo’s ~2MB) on the league route’s critical path and made the app feel unusable. This pass avoids that:
 
-```sql
-alter table public.leagues drop column if exists show_parody_sponsorships;
-drop function if exists public.admin_set_league_parody_sponsorships(uuid, boolean);
-```
+1. Never put raw / 512×512 PNGs in `static/` for deploy — sources live in `assets/sponsors-src/`
+2. Rebuild display WebPs with `python3 scripts/build-sponsor-assets.py` (requires Pillow)
+3. Ad UI is dynamically imported after idle (`SponsorAdHost`) — do not statically import `SponsorAd` from league pages
+4. One creative in the DOM at a time; footer images use `loading="lazy"` + `fetchpriority="low"`
+5. Logos are referenced by URL string, never `import`ed into the JS bundle
 
-Then recreate `admin_list_leagues` from `034_league_profile_pictures.sql` (or later) so it no longer returns that column.
+Migration: `039_parody_sponsorships.sql` (`npm run db:apply-parody-sponsorships`).
 
-## Assets that remain
+## Ad copy
 
-These files stay in `static/` for a future attempt:
+Keep the calls to action varied — spread the buzzwords around instead of ending every line with the same discount. Rough rotation of hooks in use: *use code SPOON for $5 off, 20% off today, free shipping, fast & free shipping, shop now, don't miss out, limited time only, ends soon, a brand you can trust, quality you can count on, best sellers, customer favorites, new arrivals, shop the collection, seasonal favorites, celebrate the season, hot deal, can't-miss savings, bundle & save, buy one get one.* When adding copy, pick a hook that isn't already all over the file.
 
-- `static/swensons.png`
-- `static/greatLakes.png`
-- `static/scag.png`
-- `static/italos.png`
-- `static/goodyear-blimp.png`
-
-During the first attempt they were trimmed and saved as 512×512 PNGs (Goodyear went from ~13MB to ~64KB). If you still have the source files, keep those somewhere safe; the next pass should use compressed, display-sized images from the start — not the raw exports.
-
-## Ad copy to use next time
+Copy here must stay in sync with `src/lib/sponsors.ts`, which is what the app actually renders.
 
 ### Swensons Drive-In
 
-1. Craving a Galley Boy? 🍔 Treat yourself to a Swensons classic today and save 20% OFF your order!
+1. Craving a Galley Boy? 🍔 Customer favorites, made to order — right now it's buy one, get one on the classics.
 
-2. Since 1934, Swensons has been serving up made-to-order favorites with that legendary curbside experience. Come taste the tradition—and save 20% OFF today!
+2. Since 1934, Swensons has served made-to-order favorites with that legendary curbside experience. Quality you can count on, hot to your window.
 
-3. Turn on your headlights and let Swensons come to you! 🚗 Get your favorite Galley Boy, Potato Teezers, or shake and use code SPOON for $5 OFF.
+3. Turn on your headlights and let Swensons come to you! 🚗 Galley Boy, Potato Teezers, or a shake — use code SPOON for $5 off.
 
 ### Great Lakes Brewing Company
 
-1. Raise a glass to Ohio’s original craft brewery. 🍺 Since 1988, Great Lakes Brewing Co. has been crafting award-winning favorites. Shop now and save 20% OFF!
+1. Raise a glass to Ohio’s original craft brewery. 🍺 Seasonal favorites are back on the shelf — limited time only.
 
-2. From Dortmunder Gold to Christmas Ale, Great Lakes has been Cleveland crafted since 1988. Discover a local classic and get 20% OFF your order today.
+2. From Dortmunder Gold to Christmas Ale, Cleveland crafted since 1988. Shop the collection and celebrate the season.
 
-3. Independent. Ohio-born. Employee-owned. 🍻 Bring home a piece of Great Lakes Brewing Co. and use code SPOON for $5 OFF.
+3. Independent. Ohio-born. Employee-owned. 🍻 Bundle & save on our best sellers — don’t miss out.
 
 ### Scag Power Equipment
 
-1. Built for the job. Built to last. Since 1983, Scag has been making “Simply the Best” commercial and residential mowing equipment. Shop now and save 20% OFF.
+1. Built for the job. Built to last. Since 1983, Scag has been making “Simply the Best” commercial and residential mowing equipment. A brand you can trust.
 
-2. Don’t settle for a mower that just gets the job done. Choose the heavy-duty performance Scag is known for—and get 20% OFF today.
+2. Don’t settle for a mower that just gets the job done. Heavy-duty performance, 20% off today — ends soon.
 
-3. Since 1983, Scag has built its reputation on quality, durability, and performance. Find your next Scag machine and use code SPOON for $5 OFF.
+3. Quality you can count on since 1983. Find your next Scag machine with fast & free shipping on select models.
 
 ### Italo's Pizza
 
-1. From a humble shop in 1966 to a Northeast Ohio favorite, Italo’s Pizza has stayed true to its original recipes and quality. Order now and save 20% OFF!
+1. From a humble shop in 1966 to a Northeast Ohio favorite. 🍕 Original recipes, customer favorites — shop now.
 
-2. Great pizza starts with a great recipe. 🍕 Since 1966, Italo’s has been serving its signature sauces and quality ingredients. Get 20% OFF your next order!
+2. Great pizza starts with a great recipe. Signature sauces, quality ingredients, and a hot deal on family bundles. Bundle & save.
 
-3. A family tradition since 1966. Bring home the taste of Italo Ventura’s original pizza—and use code SPOON for $5 OFF your order.
+3. A family tradition since 1966. Bring home Italo Ventura’s original pizza — buy one, get one on classic pies, limited time only.
 
 ### Goodyear
 
-1. Trusted since 1898. Goodyear has been helping keep the world moving for more than 125 years. Shop Goodyear tires today and save 20% OFF.
+1. Trusted since 1898. More than 125 years of keeping the world moving. A brand you can trust.
 
-2. From Akron to roads around the world, Goodyear has built a reputation for quality, innovation, and dependability. Choose a brand you can trust—and get 20% OFF today.
+2. From Akron to roads around the world — quality, innovation, dependability. Shop now and get free shipping on a set of four.
 
-3. More than 125 years of tire innovation. One iconic name. Goodyear. Get the tires you need today and use code SPOON for $5 OFF.
+3. More than 125 years of tire innovation. One iconic name. Can’t-miss savings on best sellers — ends soon.
+
+### Community Health Care
+
+1. Feeling run down after another Sunday? Same-day appointments are open. Don’t miss out — book today.
+
+2. Care that actually knows your name. Looking after Northeast Ohio families for decades. Quality you can count on.
+
+3. Don’t tough it out. Community Health Care makes it easy to get seen fast — new patient visits are 20% off today.
+
+### Barilla
+
+1. Dal 1877. 🍝 Italy’s favorite pasta for nearly 150 years. Stock the pantry and bundle & save.
+
+2. Perfect al dente, every single time. The pasta Italians choose most — shop our best sellers.
+
+3. From Parma to your kitchen table since 1877. New arrivals in the sauce aisle, plus free shipping over $35.
+
+### Rao's Homemade
+
+1. The sauce that started in a Harlem kitchen in 1896. 🍅 Real ingredients, no shortcuts. Shop the collection.
+
+2. Slow-simmered in small batches with whole tomatoes and pure olive oil. A hot deal on customer favorites — limited time only.
+
+3. Restaurant quality, straight off the shelf. Use code SPOON for $5 off your first order.
+
+### Cleveland Metroparks Zoo
+
+1. Make it a family day at Cleveland Metroparks Zoo. 🦍 Over 3,000 animals from around the world. Fast & free digital tickets.
+
+2. Securing a future for wildlife since 1882. New arrivals in the aquarium and seasonal favorites all summer long.
+
+3. Elephants, giraffes, and a whole lot more. Plan your trip — 20% off admission, ends soon.

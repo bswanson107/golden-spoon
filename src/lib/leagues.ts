@@ -16,7 +16,7 @@ export type CreateLeagueRules = {
 };
 
 const LEAGUE_SELECT =
-	'id, name, season_year, commissioner_id, invite_code, is_active, is_public_demo, show_profile_pictures, created_at, underdog_threshold_pct, tiebreaker_mode, pick_visibility';
+	'id, name, season_year, commissioner_id, invite_code, is_active, is_public_demo, show_profile_pictures, show_parody_sponsorships, created_at, underdog_threshold_pct, tiebreaker_mode, pick_visibility';
 
 /** Seeded 2025 Scaglione Family Pool — public demo, no invite required. */
 export const PUBLIC_DEMO_LEAGUE_ID = 'b0000001-0000-4000-8000-000000000001';
@@ -103,6 +103,7 @@ function asLeagueWithRole(
 		...league,
 		is_public_demo: Boolean(league.is_public_demo),
 		show_profile_pictures: Boolean(league.show_profile_pictures),
+		show_parody_sponsorships: Boolean(league.show_parody_sponsorships),
 		is_commissioner: Boolean(userId) && league.commissioner_id === userId,
 		is_member: isMember,
 		joined_at: joinedAt
@@ -149,7 +150,8 @@ export async function fetchMyLeagues(userId: string): Promise<{
 		.map((league) => ({
 			...league,
 			is_public_demo: Boolean(league.is_public_demo),
-			show_profile_pictures: Boolean(league.show_profile_pictures)
+			show_profile_pictures: Boolean(league.show_profile_pictures),
+			show_parody_sponsorships: Boolean(league.show_parody_sponsorships)
 		}))
 		.filter((league) => !league.is_public_demo)
 		.sort((a, b) => new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime());
@@ -223,7 +225,15 @@ export async function createLeague(
 		return { league: null, error: mapInviteError(error.message) };
 	}
 
-	return { league: { ...(data as League), is_public_demo: Boolean((data as League).is_public_demo) }, error: null };
+	return {
+		league: {
+			...(data as League),
+			is_public_demo: Boolean((data as League).is_public_demo),
+			show_profile_pictures: Boolean((data as League).show_profile_pictures),
+			show_parody_sponsorships: Boolean((data as League).show_parody_sponsorships)
+		},
+		error: null
+	};
 }
 
 export async function updateLeagueInviteCode(

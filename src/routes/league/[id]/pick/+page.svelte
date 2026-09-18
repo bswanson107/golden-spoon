@@ -4,6 +4,7 @@
 	import { base } from '$app/paths';
 	import { useAuth } from '$lib/auth';
 	import LeagueFooter from '$lib/components/league/LeagueFooter.svelte';
+	import SponsorAdHost from '$lib/components/league/SponsorAdHost.svelte';
 	import DemoBanner from '$lib/components/pick/DemoBanner.svelte';
 	import PickWeekPanel from '$lib/components/pick/PickWeekPanel.svelte';
 	import SeasonLongPicksModal from '$lib/components/pick/SeasonLongPicksModal.svelte';
@@ -350,6 +351,10 @@
 			bind:league
 			weekNumber={isDemo ? regularSeasonWeek(demoState.simulatedWeek) : viewWeek}
 		/>
+
+		{#if league.show_parody_sponsorships}
+			<SponsorAdHost />
+		{/if}
 	{/if}
 </main>
 

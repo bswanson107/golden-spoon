@@ -4,6 +4,7 @@
 	import { isAppAdmin } from '$lib/admin';
 	import {
 		adminDeleteUser,
+		adminSetLeagueParodySponsorships,
 		adminSetLeagueProfilePictures,
 		adminUpdateUser,
 		fetchAdminLeagues,
@@ -131,6 +132,25 @@
 		);
 	}
 
+	async function handleToggleParodySponsorships(league: AdminLeagueRow, enabled: boolean) {
+		if (togglingLeagueId) return;
+
+		togglingLeagueId = league.id;
+		leagueToggleError = null;
+
+		const result = await adminSetLeagueParodySponsorships(league.id, enabled);
+		togglingLeagueId = null;
+
+		if (result.error) {
+			leagueToggleError = result.error;
+			return;
+		}
+
+		leagues = leagues.map((row) =>
+			row.id === league.id ? { ...row, show_parody_sponsorships: enabled } : row
+		);
+	}
+
 	async function handleDeleteUser(user: AdminUserRow) {
 		if (deletingUserId) return;
 
@@ -239,6 +259,19 @@
 												)}
 										/>
 										<span>Profile pics</span>
+									</label>
+									<label class="league-toggle">
+										<input
+											type="checkbox"
+											checked={league.show_parody_sponsorships}
+											disabled={togglingLeagueId === league.id}
+											onchange={(event) =>
+												handleToggleParodySponsorships(
+													league,
+													(event.currentTarget as HTMLInputElement).checked
+												)}
+										/>
+										<span>Parody ads</span>
 									</label>
 								</div>
 							</li>

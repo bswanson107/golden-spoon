@@ -13,6 +13,7 @@ export type League = {
 	tiebreaker_mode: TiebreakerMode;
 	pick_visibility: PickVisibility;
 	show_profile_pictures: boolean;
+	show_parody_sponsorships: boolean;
 };
 
 export type LeagueMembership = {

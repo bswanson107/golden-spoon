@@ -14,6 +14,7 @@
 	import type { WeekGame } from '$lib/types/game';
 	import type { LeagueWithRole } from '$lib/types/league';
 	import type { LeaguePick, StandingRow } from '$lib/types/standings';
+	import type { Component } from 'svelte';
 
 	let {
 		league = $bindable(),
@@ -41,15 +42,28 @@
 	let fetchedPicks = $state<LeaguePick[]>([]);
 	let fetchedGames = $state<WeekGame[]>([]);
 	let fetchToken = $state(0);
+	let SponsorWall = $state<Component | null>(null);
 
 	const isDemo = $derived(isDemoSeason(league.season_year));
 	const rulesThreshold = $derived(normalizeUnderdogThreshold(league.underdog_threshold_pct));
 	const rulesTiebreakerMode = $derived(parseTiebreakerMode(league.tiebreaker_mode));
 	const rulesPickVisibility = $derived(parsePickVisibility(league.pick_visibility));
+	const showSponsors = $derived(Boolean(league.show_parody_sponsorships));
 
 	const standings = $derived(standingsProp ?? fetchedStandings);
 	const picks = $derived(picksProp ?? fetchedPicks);
 	const games = $derived(gamesProp ?? fetchedGames);
+
+	$effect(() => {
+		if (!showSponsors || SponsorWall) return;
+		let cancelled = false;
+		void import('$lib/components/league/SponsorWall.svelte').then((mod) => {
+			if (!cancelled) SponsorWall = mod.default;
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	$effect(() => {
 		if (!commissionerOpen || !league.is_commissioner) return;
@@ -133,6 +147,10 @@
 		<a href="{base}/leagues" class="btn btn-ghost btn-sm">Other leagues</a>
 	{/if}
 </footer>
+
+{#if showSponsors && SponsorWall}
+	<SponsorWall />
+{/if}
 
 <LeagueRulesModal
 	open={rulesOpen}

@@ -10,6 +10,7 @@ export type AdminLeagueRow = {
 	is_public_demo: boolean;
 	is_active: boolean;
 	show_profile_pictures: boolean;
+	show_parody_sponsorships: boolean;
 	created_at: string;
 };
 
@@ -75,7 +76,8 @@ export async function fetchAdminLeagues(): Promise<{
 	const leagues = ((data ?? []) as AdminLeagueRow[]).map((row) => ({
 		...row,
 		member_count: Number(row.member_count),
-		show_profile_pictures: Boolean(row.show_profile_pictures)
+		show_profile_pictures: Boolean(row.show_profile_pictures),
+		show_parody_sponsorships: Boolean(row.show_parody_sponsorships)
 	}));
 
 	return { leagues, error: null };
@@ -144,6 +146,30 @@ export async function adminSetLeagueProfilePictures(
 				error: missingRpcMessage(
 					'admin_set_league_profile_pictures',
 					'db:apply-league-profile-pictures'
+				)
+			};
+		}
+		return { error: error.message };
+	}
+
+	return { error: null };
+}
+
+export async function adminSetLeagueParodySponsorships(
+	leagueId: string,
+	enabled: boolean
+): Promise<{ error: string | null }> {
+	const { error } = await getSupabase().rpc('admin_set_league_parody_sponsorships', {
+		p_league_id: leagueId,
+		p_show_parody_sponsorships: enabled
+	});
+
+	if (error) {
+		if (isMissingRpc(error, 'admin_set_league_parody_sponsorships')) {
+			return {
+				error: missingRpcMessage(
+					'admin_set_league_parody_sponsorships',
+					'db:apply-parody-sponsorships'
 				)
 			};
 		}
