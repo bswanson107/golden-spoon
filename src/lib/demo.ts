@@ -117,8 +117,13 @@ export function getUsedTeamIds(picks: Record<number, DemoPick>): Set<string> {
 	return new Set(Object.values(picks).map((pick) => pick.team_id));
 }
 
+/**
+ * Compares the *displayed* (rounded) win % so the badge always agrees with the
+ * number on screen: at a 33 threshold, 33.4% shows "33%" and is an underdawg,
+ * 33.5% shows "34%" and is not. Mirrors public.is_underdog in SQL.
+ */
 export function isUnderdog(winPct: number, threshold = DEFAULT_UNDERDOG_THRESHOLD): boolean {
-	return winPct <= threshold;
+	return Math.round(winPct) <= Math.round(threshold);
 }
 
 export function resolveOutcome(teamId: string, game: WeekGame): PickOutcome {

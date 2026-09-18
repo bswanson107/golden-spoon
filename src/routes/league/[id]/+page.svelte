@@ -37,6 +37,7 @@
 		isPublicDemoLeagueId
 	} from '$lib/leagues';
 	import {
+		normalizeUnderdogThreshold,
 		parsePickVisibility,
 		parseTiebreakerMode
 	} from '$lib/leagueRules';
@@ -263,6 +264,9 @@
 
 	const rulesTiebreakerMode = $derived(parseTiebreakerMode(league?.tiebreaker_mode));
 	const rulesPickVisibility = $derived(parsePickVisibility(league?.pick_visibility));
+	const rulesUnderdogThreshold = $derived(
+		normalizeUnderdogThreshold(league?.underdog_threshold_pct)
+	);
 
 	function refreshDemoState() {
 		const id = leagueId;
@@ -627,6 +631,7 @@
 				pickCta={dashboardCta}
 				userPick={dashboardPick}
 				game={dashboardGame}
+				underdogThreshold={rulesUnderdogThreshold}
 			/>
 		{/if}
 

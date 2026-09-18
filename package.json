@@ -27,6 +27,7 @@
 		"db:apply-live-tiebreaker": "node scripts/apply-sql.mjs supabase/migrations/038_live_tiebreaker.sql",
 		"db:apply-parody-sponsorships": "node scripts/apply-sql.mjs supabase/migrations/039_parody_sponsorships.sql",
 		"db:apply-scored-pick-tiebreaker": "node scripts/apply-sql.mjs supabase/migrations/040_scored_pick_tiebreaker.sql",
+		"db:apply-underdog-current-odds": "node scripts/apply-sql.mjs supabase/migrations/041_underdog_current_odds.sql",
 		"sponsors:build": "python3 scripts/build-sponsor-assets.py",
 		"db:generate-games": "node --import tsx/esm scripts/generate-games-migration.mjs",
 		"test:e2e": "playwright test --config=e2e/playwright.config.ts",

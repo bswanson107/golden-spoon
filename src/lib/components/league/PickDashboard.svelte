@@ -3,8 +3,10 @@
 	import GameKickoffInfo from '$lib/components/pick/GameKickoffInfo.svelte';
 	import WinPctBar from '$lib/components/pick/WinPctBar.svelte';
 	import TeamLogo from '$lib/components/TeamLogo.svelte';
-	import { formatPoints, outcomeLabel } from '$lib/demo';
+	import { formatPoints, getTeamWinPct, isUnderdog, outcomeLabel } from '$lib/demo';
 	import { formatFinalScore } from '$lib/games';
+	import { DEFAULT_UNDERDOG_THRESHOLD } from '$lib/leagueRules';
+	import { qaNow } from '$lib/qaClock.svelte';
 	import PickKickoffCountdown from '$lib/components/league/PickKickoffCountdown.svelte';
 	import type { PickCtaState } from '$lib/leaguePickStatus';
 	import type { WeekGame } from '$lib/types/game';
@@ -15,16 +17,39 @@
 		week,
 		pickCta,
 		userPick = null,
-		game = null
+		game = null,
+		underdogThreshold = DEFAULT_UNDERDOG_THRESHOLD
 	}: {
 		leagueId: string;
 		week: number;
 		pickCta: PickCtaState;
 		userPick?: LeaguePick | null;
 		game?: WeekGame | null;
+		underdogThreshold?: number;
 	} = $props();
 
 	const pickUrl = $derived(`${base}/league/${leagueId}/pick`);
+
+	/**
+	 * Underdawg status tracks the game's *current* odds right up to kickoff, so
+	 * odds moving off the threshold after the pick was made drops the badge.
+	 * At kickoff the stored snapshot takes over, which is what scoring uses.
+	 */
+	const showUnderdawg = $derived.by(() => {
+		const pick = userPick;
+		if (!pick || pick.is_missed) return false;
+
+		const kickedOff = pick.kickoff_at
+			? new Date(pick.kickoff_at).getTime() <= qaNow()
+			: false;
+
+		if (pick.outcome === 'pending' && !kickedOff && game) {
+			const winPct = getTeamWinPct(game, pick.team_id);
+			if (winPct !== null) return isUnderdog(winPct, underdogThreshold);
+		}
+
+		return pick.is_underdog_at_pick;
+	});
 
 	const matchup = $derived.by(() => {
 		if (!userPick || !game) return null;
@@ -91,7 +116,7 @@
 							<a href={pickUrl} class="btn btn-ghost btn-sm change-link">Change pick</a>
 						{/if}
 					</div>
-					{#if userPick.is_underdog_at_pick}
+					{#if showUnderdawg}
 						<span class="badge badge-underdawg">Underdawg · 2 pts</span>
 					{/if}
 					{#if userPick.outcome !== 'pending'}

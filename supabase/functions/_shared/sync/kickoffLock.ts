@@ -72,7 +72,8 @@ export async function lockKickoffWinPcts(
 		if (teamWinPct === null) continue;
 
 		const threshold = Number(league.underdog_threshold_pct);
-		const isUnderdog = teamWinPct <= threshold;
+		// Rounded compare, matching public.is_underdog and the UI badge.
+		const isUnderdog = Math.round(teamWinPct) <= Math.round(threshold);
 
 		if (
 			Math.abs(Number(pick.win_pct_at_pick) - teamWinPct) < 0.001 &&
