@@ -39,7 +39,12 @@ function toTeam(abbr: string): NflTeam {
 		id: code,
 		abbreviation: code,
 		name: getTeamName(code),
-		city: null
+		city: null,
+		wins: 0,
+		losses: 0,
+		ties: 0,
+		points_for: 0,
+		points_against: 0
 	};
 }
 

@@ -2,16 +2,19 @@
 	import { onMount } from 'svelte';
 	import type { Snippet } from 'svelte';
 	import MemberAvatar from '$lib/components/MemberAvatar.svelte';
-	import type { StandingRow } from '$lib/types/standings';
+	import type { LeaguePick, StandingRow } from '$lib/types/standings';
 	import {
 		DEFAULT_TIEBREAKER_MODE,
 		type TiebreakerMode,
 		parseTiebreakerMode,
 		tiebreakerHint
 	} from '$lib/leagueRules';
+	import { rankMovementByUser, streakFromPicks, type PickStreak, type RankMove } from '$lib/standingStats';
 
 	let {
 		standings,
+		picks = [],
+		movementWeek = 1,
 		currentUserId = null,
 		tiebreakerMode = DEFAULT_TIEBREAKER_MODE,
 		showProfilePictures = false,
@@ -22,6 +25,13 @@
 		stickyTop
 	}: {
 		standings: StandingRow[];
+		/** Picks already limited to the weeks reflected in `standings`. */
+		picks?: LeaguePick[];
+		/**
+		 * Week whose results count as "this week" for +/-.
+		 * Previous rank uses picks from earlier weeks only.
+		 */
+		movementWeek?: number;
 		currentUserId?: string | null;
 		tiebreakerMode?: TiebreakerMode | string;
 		showProfilePictures?: boolean;
@@ -54,13 +64,67 @@
 		return true;
 	}
 
-	/** Mobile only; desktop always shows the TB column. Off by default. */
-	let showTiebreakers = $state(false);
+	/** Mobile only; desktop always shows tiebreaker, streak, and +/-. Off by default. */
+	let showAdvancedStats = $state(false);
 	/**
 	 * Matches the mobile CSS breakpoint where the TB column can be toggled off.
 	 * Start false to match SSR; onMount syncs to the real viewport.
 	 */
 	let isMobileViewport = $state(false);
+	let scroller = $state<HTMLDivElement | null>(null);
+	/** Full content width of the table, mirrored by the top scrollbar. */
+	let overflowWidth = $state(0);
+	let viewportWidth = $state(0);
+	let scrollLeft = $state(0);
+	let canScrollX = $state(false);
+
+	const thumbWidth = $derived(
+		overflowWidth > 0 ? Math.max(28, (viewportWidth / overflowWidth) * viewportWidth) : 0
+	);
+	const thumbOffset = $derived.by(() => {
+		const max = overflowWidth - viewportWidth;
+		const travel = viewportWidth - thumbWidth;
+		if (max <= 0 || travel <= 0) return 0;
+		return (scrollLeft / max) * travel;
+	});
+
+	function updateScrollHint() {
+		if (!scroller) return;
+		const width = scroller.scrollWidth;
+		const view = scroller.clientWidth;
+		const overflow = width > view + 1;
+		if (width !== overflowWidth) overflowWidth = width;
+		if (view !== viewportWidth) viewportWidth = view;
+		if (scroller.scrollLeft !== scrollLeft) scrollLeft = scroller.scrollLeft;
+		if (overflow !== canScrollX) canScrollX = overflow;
+	}
+
+	function onContentScroll() {
+		hideTip();
+		if (!scroller || scroller.scrollLeft === scrollLeft) return;
+		scrollLeft = scroller.scrollLeft;
+	}
+
+	function scrollFromPointer(event: PointerEvent, track: HTMLElement) {
+		if (!scroller) return;
+		const rect = track.getBoundingClientRect();
+		const max = scroller.scrollWidth - scroller.clientWidth;
+		const travel = Math.max(rect.width - thumbWidth, 1);
+		const x = Math.min(Math.max(event.clientX - rect.left - thumbWidth / 2, 0), travel);
+		scroller.scrollLeft = (x / travel) * max;
+	}
+
+	function onHintPointerDown(event: PointerEvent) {
+		const track = event.currentTarget as HTMLElement;
+		track.setPointerCapture(event.pointerId);
+		scrollFromPointer(event, track);
+	}
+
+	function onHintPointerMove(event: PointerEvent) {
+		const track = event.currentTarget as HTMLElement;
+		if (!track.hasPointerCapture(event.pointerId)) return;
+		scrollFromPointer(event, track);
+	}
 
 	onMount(() => {
 		const mq = window.matchMedia('(max-width: 640px)');
@@ -69,19 +133,117 @@
 		};
 		sync();
 		mq.addEventListener('change', sync);
-		return () => mq.removeEventListener('change', sync);
+
+		const ro = new ResizeObserver(() => updateScrollHint());
+		if (scroller) {
+			ro.observe(scroller);
+			if (scroller.firstElementChild) ro.observe(scroller.firstElementChild);
+		}
+		updateScrollHint();
+
+		return () => {
+			mq.removeEventListener('change', sync);
+			ro.disconnect();
+		};
 	});
 
 	/**
-	 * Omit the TB column from the table when it's toggled off on mobile.
+	 * Omit advanced columns when they're toggled off on mobile.
 	 * Hiding via CSS (visibility:collapse / display:none on <col>) leaves a
-	 * trailing gap in Safari with table-layout:fixed; removing the column avoids that.
+	 * trailing gap in Safari with table-layout:fixed; removing the columns avoids that.
 	 */
-	const showTbColumn = $derived(!isMobileViewport || showTiebreakers);
-	const columnCount = $derived(showTbColumn ? 5 : 4);
+	const showAdvancedColumns = $derived(!isMobileViewport || showAdvancedStats);
+
+	const streaks = $derived.by(() => {
+		const byUser = new Map<string, LeaguePick[]>();
+		for (const pick of picks) {
+			const key = pick.user_id.toLowerCase();
+			const list = byUser.get(key) ?? [];
+			list.push(pick);
+			byUser.set(key, list);
+		}
+		const map = new Map<string, PickStreak | null>();
+		for (const [key, userPicks] of byUser) {
+			map.set(key, streakFromPicks(userPicks));
+		}
+		return map;
+	});
+
+	const movement = $derived(rankMovementByUser(standings, picks, movementWeek));
+
+	function streakFor(userId: string): PickStreak | null {
+		return streaks.get(userId.toLowerCase()) ?? null;
+	}
+
+	function moveFor(userId: string): RankMove | null {
+		return movement.get(userId.toLowerCase()) ?? null;
+	}
+
+	let tipText = $state<string | null>(null);
+	let tipStyle = $state('');
+
+	function showTip(event: MouseEvent | FocusEvent, text: string) {
+		const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+		const maxWidth = Math.min(256, window.innerWidth - 16);
+		const pinLeft = rect.right - maxWidth < 8;
+		tipText = text;
+		tipStyle = pinLeft
+			? `top:${rect.bottom + 6}px;left:8px;max-width:${maxWidth}px`
+			: `top:${rect.bottom + 6}px;left:${rect.right}px;transform:translateX(-100%);max-width:${maxWidth}px`;
+	}
+
+	function hideTip() {
+		tipText = null;
+	}
+
+	$effect(() => {
+		showAdvancedColumns;
+		standings.length;
+		queueMicrotask(() => updateScrollHint());
+	});
 </script>
 
-<div class="standings-wrap" class:show-tb={showTiebreakers}>
+<svelte:window onscroll={hideTip} />
+
+<div
+	class="standings-wrap"
+	class:show-advanced={showAdvancedStats}
+	class:advanced-cols={showAdvancedColumns}
+>
+	{#if stickyTop}
+		<div class="sticky-top">
+			<div class="title-with-toggle">
+				<div class="title-copy">
+					{@render stickyTop()}
+				</div>
+				<label class="tb-toggle">
+					<input
+						type="checkbox"
+						bind:checked={showAdvancedStats}
+						aria-controls={showAdvancedColumns
+							? 'standings-tb-col standings-streak-col standings-move-col'
+							: undefined}
+					/>
+					<span>Advanced Stats</span>
+				</label>
+			</div>
+		</div>
+	{/if}
+	{#if canScrollX}
+		<div
+			class="scroll-hint"
+			aria-hidden="true"
+			onpointerdown={onHintPointerDown}
+			onpointermove={onHintPointerMove}
+		>
+			<div
+				class="scroll-hint-thumb"
+				style:width="{thumbWidth}px"
+				style:transform="translateX({thumbOffset}px)"
+			></div>
+		</div>
+	{/if}
+	<div class="standings-scroll" bind:this={scroller} onscroll={onContentScroll}>
 	<table class="standings">
 		<!-- colgroup beats the colspan title row for fixed-layout column widths -->
 		<colgroup>
@@ -89,52 +251,48 @@
 			<col class="c-player" />
 			<col class="c-num" />
 			<col class="c-num" />
-			{#if showTbColumn}
+			{#if showAdvancedColumns}
 				<col class="c-tb" />
+				<col class="c-streak" />
+				<col class="c-move" />
 			{/if}
 		</colgroup>
 		<thead>
-			{#if stickyTop}
-				<tr class="title-row">
-					<th colspan={columnCount} scope="colgroup">
-						<div class="sticky-top">
-							<div class="title-with-toggle">
-								<div class="title-copy">
-									{@render stickyTop()}
-								</div>
-								<label class="tb-toggle">
-									<input
-										type="checkbox"
-										bind:checked={showTiebreakers}
-										aria-controls={showTbColumn ? 'standings-tb-col' : undefined}
-									/>
-									<span>Show Tiebreakers</span>
-								</label>
-							</div>
-							<p class="muted tb-explain">
-								Tiebreaker: live sum of picked teams' current season wins ({resolvedTiebreaker ===
-								'most_wins'
-									? 'higher'
-									: 'lower'} is better).
-							</p>
-						</div>
-					</th>
-				</tr>
-			{/if}
 			<tr class="cols-row">
 				<th scope="col" class="col-rank">#</th>
 				<th scope="col" class="col-player">Player</th>
 				<th scope="col" class="col-num">Pts</th>
 				<th scope="col" class="col-num">W-L</th>
-				{#if showTbColumn}
-					<th scope="col" class="col-num col-tb" id="standings-tb-col">
+				{#if showAdvancedColumns}
+					<th scope="col" class="col-num col-advanced col-tb" id="standings-tb-col">
 						<span
 							class="tb-label"
-							title={tiebreakerHint(resolvedTiebreaker)}
-							aria-label={tiebreakerHint(resolvedTiebreaker)}
-							data-tooltip="Tiebreaker"
 							tabindex="0"
+							onmouseenter={(e) => showTip(e, tiebreakerHint(resolvedTiebreaker))}
+							onmouseleave={hideTip}
+							onfocus={(e) => showTip(e, tiebreakerHint(resolvedTiebreaker))}
+							onblur={hideTip}
 						>TB</span>
+					</th>
+					<th scope="col" class="col-num col-advanced col-streak" id="standings-streak-col">
+						<span
+							class="tb-label"
+							tabindex="0"
+							onmouseenter={(e) => showTip(e, 'Consecutive wins or losses')}
+							onmouseleave={hideTip}
+							onfocus={(e) => showTip(e, 'Consecutive wins or losses')}
+							onblur={hideTip}
+						>Streak</span>
+					</th>
+					<th scope="col" class="col-num col-advanced col-move" id="standings-move-col">
+						<span
+							class="tb-label"
+							tabindex="0"
+							onmouseenter={(e) => showTip(e, 'Places moved since last week')}
+							onmouseleave={hideTip}
+							onfocus={(e) => showTip(e, 'Places moved since last week')}
+							onblur={hideTip}
+						>+/−</span>
 					</th>
 				{/if}
 			</tr>
@@ -177,15 +335,50 @@
 						>{row.total_points.toFixed(1)}</td
 					>
 					<td class="col-num" data-testid="standings-record">{formatRecord(row)}</td>
-					{#if showTbColumn}
-						<td class="col-num col-tb tb" data-testid="standings-tb"
+					{#if showAdvancedColumns}
+						{@const streak = streakFor(row.user_id)}
+						{@const move = moveFor(row.user_id)}
+						<td class="col-num col-advanced col-tb tb" data-testid="standings-tb"
 							>{row.tiebreaker_picked_team_wins}</td
 						>
+						<td class="col-num col-advanced col-streak" data-testid="standings-streak">
+							{#if streak}
+								<span class:streak-w={streak.kind === 'W'} class:streak-l={streak.kind === 'L'}
+									>{streak.kind}{streak.length}</span
+								>
+							{:else}
+								<span class="flat">—</span>
+							{/if}
+						</td>
+						<td class="col-num col-advanced col-move" data-testid="standings-move">
+							{#if move && move.direction !== 'same'}
+								<span
+									class="move"
+									class:up={move.direction === 'up'}
+									class:down={move.direction === 'down'}
+									aria-label={move.direction === 'up'
+										? `Up ${move.places} since last week`
+										: `Down ${move.places} since last week`}
+								>
+									<span aria-hidden="true">{move.direction === 'up' ? '↑' : '↓'}</span>{move.places}
+								</span>
+							{:else}
+								<span
+									class="flat"
+									aria-label={move ? 'No change since last week' : 'No previous week'}
+									>—</span
+								>
+							{/if}
+						</td>
 					{/if}
 				</tr>
 			{/each}
 		</tbody>
 	</table>
+	</div>
+	{#if tipText}
+		<div class="col-tip" style={tipStyle} role="tooltip">{tipText}</div>
+	{/if}
 </div>
 
 <style>
@@ -196,8 +389,49 @@
 		margin-top: -1.1rem;
 	}
 
+	.scroll-hint {
+		position: relative;
+		height: 6px;
+		margin: 0.1rem 0 0.35rem;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--text) 12%, transparent);
+		cursor: grab;
+		touch-action: none;
+	}
+
+	.scroll-hint:active {
+		cursor: grabbing;
+	}
+
+	.scroll-hint-thumb {
+		position: absolute;
+		top: 0;
+		left: 0;
+		height: 100%;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--text) 42%, transparent);
+		pointer-events: none;
+	}
+
+	.standings-scroll {
+		container-type: inline-size;
+		max-width: 100%;
+		/* clip on the block axis so horizontal scroll does not force a vertical scrollbar. */
+		overflow-x: auto;
+		overflow-y: clip;
+		overscroll-behavior-x: contain;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: none;
+	}
+
+	.standings-scroll::-webkit-scrollbar {
+		display: none;
+		height: 0;
+	}
+
 	.standings {
 		width: 100%;
+		min-width: 32rem;
 		table-layout: fixed;
 		border-collapse: collapse;
 		font-size: 0.9rem;
@@ -219,19 +453,17 @@
 		width: 3.25rem;
 	}
 
-	thead {
-		position: sticky;
-		top: var(--app-sticky-top, 3.75rem);
-		z-index: 40;
-		background: var(--surface);
+	.c-streak {
+		width: 4.5rem;
 	}
 
-	.title-row th {
-		padding: 1.1rem 0 0.55rem;
-		border: none;
-		font-weight: inherit;
-		text-align: left;
-		vertical-align: bottom;
+	.c-move {
+		width: 3.75rem;
+	}
+
+	thead {
+		position: relative;
+		z-index: 2;
 		background: var(--surface);
 	}
 
@@ -265,6 +497,7 @@
 		cursor: pointer;
 		user-select: none;
 		white-space: nowrap;
+		margin-right: 3px;
 	}
 
 	.tb-toggle input {
@@ -273,20 +506,24 @@
 		accent-color: var(--brand);
 	}
 
-	.standings-wrap.show-tb .tb-toggle {
+	.standings-wrap.show-advanced .tb-toggle {
 		color: var(--text);
 	}
 
+	.sticky-top {
+		position: sticky;
+		top: var(--app-sticky-top, 3.75rem);
+		z-index: 41;
+		background: var(--surface);
+		padding: 1.1rem 0 0.55rem;
+	}
+
 	.sticky-top :global(.card-title) {
-		margin: 0 0 0.35rem;
+		margin: 0;
 	}
 
 	.sticky-top :global(.muted) {
-		margin: 0 0 0.75rem;
-	}
-
-	.sticky-top .tb-explain {
-		margin: 0.55rem 0 0;
+		margin: 0.35rem 0 0;
 	}
 
 	.sticky-top :global(.muted:last-child),
@@ -304,10 +541,6 @@
 		letter-spacing: 0.04em;
 		vertical-align: bottom;
 		background: var(--surface);
-	}
-
-	thead:not(:has(.title-row)) .cols-row th {
-		padding-top: calc(1.1rem + 0.35rem);
 	}
 
 	td {
@@ -358,17 +591,25 @@
 	}
 
 	@media (max-width: 640px) {
+		.standings {
+			min-width: 0;
+		}
+
+		.standings-wrap.show-advanced .standings {
+			/* Extra width is the TB + streak + movement columns, so the others keep their spacing. */
+			width: calc(100% + 2.5rem + 4.25rem + 3.25rem);
+			min-width: calc(100% + 2.5rem + 4.25rem + 3.25rem);
+		}
+
 		.tb-toggle {
 			display: inline-flex;
 		}
 
-		.standings-wrap:not(.show-tb) .tb-explain {
-			display: none;
-		}
-
-		/* Pre-hydration fallback: hide TB until matchMedia removes the column from the DOM. */
-		.standings-wrap:not(.show-tb) .c-tb,
-		.standings-wrap:not(.show-tb) .col-tb {
+		/* Pre-hydration fallback: hide advanced columns until matchMedia removes them. */
+		.standings-wrap:not(.show-advanced) .c-tb,
+		.standings-wrap:not(.show-advanced) .c-streak,
+		.standings-wrap:not(.show-advanced) .c-move,
+		.standings-wrap:not(.show-advanced) .col-advanced {
 			display: none;
 		}
 
@@ -382,6 +623,14 @@
 
 		.c-tb {
 			width: 2.5rem;
+		}
+
+		.c-streak {
+			width: 4.25rem;
+		}
+
+		.c-move {
+			width: 3.25rem;
 		}
 
 		.col-rank,
@@ -411,12 +660,10 @@
 		cursor: help;
 	}
 
-	.tb-label::after {
-		content: attr(data-tooltip);
-		position: absolute;
-		right: 0;
-		bottom: calc(100% + 0.4rem);
-		transform: translateY(0.15rem);
+	.col-tip {
+		position: fixed;
+		z-index: 400;
+		width: max-content;
 		padding: 0.35rem 0.55rem;
 		border-radius: var(--radius);
 		background: var(--text);
@@ -424,21 +671,12 @@
 		font-size: 0.72rem;
 		font-weight: 600;
 		letter-spacing: 0.01em;
+		line-height: 1.35;
+		text-align: left;
 		text-transform: none;
-		white-space: nowrap;
+		white-space: normal;
 		box-shadow: var(--shadow);
-		opacity: 0;
 		pointer-events: none;
-		transition:
-			opacity 0.12s ease,
-			transform 0.12s ease;
-		z-index: 300;
-	}
-
-	.tb-label:hover::after,
-	.tb-label:focus-visible::after {
-		opacity: 1;
-		transform: translateY(0);
 	}
 
 	.tb-label:focus-visible {
@@ -497,6 +735,22 @@
 	}
 
 	.tb {
+		color: var(--text-muted);
+	}
+
+	.streak-w,
+	.move.up {
+		color: var(--ring-win);
+		font-weight: 700;
+	}
+
+	.streak-l,
+	.move.down {
+		color: var(--ring-loss);
+		font-weight: 700;
+	}
+
+	.flat {
 		color: var(--text-muted);
 	}
 

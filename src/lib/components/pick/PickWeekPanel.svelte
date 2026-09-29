@@ -439,17 +439,17 @@
 		{#if priorScored}
 			<div class="result-banner {priorScored.outcome}">
 				<p class="result-title">Week {priorWeek} result</p>
-				<p class="result-body">
-					<span class="pick-with-logo">
-						<TeamLogo teamCode={priorScored.team_id} size={28} />
+				<p class="result-body pick-with-logo">
+					<TeamLogo teamCode={priorScored.team_id} size={28} />
+					<span class="result-copy">
 						You picked <strong>{priorScored.team_abbreviation}</strong>
+						({formatWinPct(priorScored.win_pct_at_pick)})
+						— {outcomeLabel(priorScored.outcome)},
+						{formatPoints(priorScored.points_awarded)} pt{formatPoints(priorScored.points_awarded) === '1' ? '' : 's'}
+						{#if priorScored.outcome === 'win' && priorScored.is_underdog_at_pick}
+							<span class="underdawg-note">Underdawg bonus!</span>
+						{/if}
 					</span>
-					({formatWinPct(priorScored.win_pct_at_pick)})
-					— {outcomeLabel(priorScored.outcome)},
-					{formatPoints(priorScored.points_awarded)} pt{formatPoints(priorScored.points_awarded) === '1' ? '' : 's'}
-					{#if priorScored.outcome === 'win' && priorScored.is_underdog_at_pick}
-						<span class="underdawg-note">Underdawg bonus!</span>
-					{/if}
 				</p>
 			</div>
 		{/if}
@@ -467,9 +467,11 @@
 				<p class="result-title">This week's result</p>
 				<p class="result-body pick-with-logo">
 					<TeamLogo teamCode={currentScored.team_id} size={28} />
-					<strong>{currentScored.team_abbreviation}</strong>
-					— {outcomeLabel(currentScored.outcome)},
-					{formatPoints(currentScored.points_awarded)} pt{formatPoints(currentScored.points_awarded) === '1' ? '' : 's'}
+					<span class="result-copy">
+						<strong>{currentScored.team_abbreviation}</strong>
+						— {outcomeLabel(currentScored.outcome)},
+						{formatPoints(currentScored.points_awarded)} pt{formatPoints(currentScored.points_awarded) === '1' ? '' : 's'}
+					</span>
 				</p>
 			</div>
 		{/if}
@@ -794,9 +796,14 @@
 	}
 
 	.pick-with-logo {
-		display: inline-flex;
+		display: flex;
 		align-items: center;
 		gap: 0.5rem;
+	}
+
+	.result-copy {
+		min-width: 0;
+		line-height: 1.35;
 	}
 
 	.underdawg-note {

@@ -686,6 +686,8 @@
 			{:else}
 				<StandingsTable
 					standings={leagueView.standings}
+					picks={leagueView.picks}
+					movementWeek={leagueView.demoActive ? (leagueView.maxVisibleWeek ?? 0) : viewWeek}
 					currentUserId={isPublicDemo ? null : (auth.user?.id ?? null)}
 					tiebreakerMode={rulesTiebreakerMode}
 					showProfilePictures={Boolean(league.show_profile_pictures)}

@@ -5,6 +5,11 @@ export type NflTeam = {
 	abbreviation: string;
 	name: string;
 	city: string | null;
+	wins: number;
+	losses: number;
+	ties: number;
+	points_for: number;
+	points_against: number;
 };
 
 export type WeekGame = {

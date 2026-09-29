@@ -4,7 +4,7 @@
 	import WinPctBar from '$lib/components/pick/WinPctBar.svelte';
 	import { getTeamName, getTeamSurfaceTint } from '$lib/data/nflTeams';
 	import { isUnderdog, outcomeLabel } from '$lib/demo';
-	import { formatFinalScore } from '$lib/games';
+	import { formatFinalScore, formatTeamRecord } from '$lib/games';
 	import { qaNow } from '$lib/qaClock.svelte';
 	import type { WeekGame } from '$lib/types/game';
 	import type { PickOutcome } from '$lib/types/standings';
@@ -148,6 +148,7 @@
 				<TeamLogo teamCode={game.away.id} size={logoSize} />
 			</div>
 			<span class="team-name">{displayName(game.away.id, game.away.name)}</span>
+			<span class="team-record">{formatTeamRecord(game.away)}</span>
 			<div class="badges">
 				{#if pickBadge(game.away.id) === 'current'}
 					<span
@@ -192,6 +193,7 @@
 				<TeamLogo teamCode={game.home.id} size={logoSize} />
 			</div>
 			<span class="team-name">{displayName(game.home.id, game.home.name)}</span>
+			<span class="team-record">{formatTeamRecord(game.home)}</span>
 			<div class="badges">
 				{#if pickBadge(game.home.id) === 'current'}
 					<span
@@ -347,6 +349,15 @@
 		color: var(--text);
 		max-width: 100%;
 	}
+
+	.team-record {
+		font-size: 0.78rem;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		line-height: 1.2;
+		color: var(--text-muted);
+	}
+
 
 	.badges {
 		display: flex;

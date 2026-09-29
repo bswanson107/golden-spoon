@@ -3,7 +3,7 @@
 	import GameKickoffInfo from '$lib/components/pick/GameKickoffInfo.svelte';
 	import { getTeamName } from '$lib/data/nflTeams';
 	import { isUnderdog, formatWinPct, outcomeLabel } from '$lib/demo';
-	import { formatFinalScore } from '$lib/games';
+	import { formatFinalScore, formatTeamRecord } from '$lib/games';
 	import { qaNow } from '$lib/qaClock.svelte';
 	import type { WeekGame } from '$lib/types/game';
 	import type { PickOutcome } from '$lib/types/standings';
@@ -31,6 +31,7 @@
 		pickOutcome?: PickOutcome | null;
 		onSelectTeam?: (game: WeekGame, teamId: string) => void;
 	} = $props();
+
 
 	type TeamState = 'selected' | 'selectable' | 'locked' | 'used-elsewhere' | 'used-locked';
 
@@ -161,6 +162,7 @@
 								<span class="side-label">{side}</span>
 								<div class="team-line-primary">
 									<span class="team-name">{fullName}</span>
+									<span class="team-record">{formatTeamRecord(team)}</span>
 								</div>
 								<div class="team-line-meta">
 									{#if isSelected || usedWk !== undefined || isUD}
@@ -234,6 +236,7 @@
 		border-bottom: none;
 		white-space: nowrap;
 	}
+
 
 	.team-row td.col-pick {
 		/* 1px height trick: forces the pick-block child to stretch to full row height */
@@ -315,6 +318,7 @@
 		border-color: var(--brand);
 	}
 
+
 	/* Only one teammate outlined — close that team's open shared edge. */
 	.team-row.has-outline.is-away:not(:has(+ .team-row.has-outline)) .pick-block {
 		border-bottom-width: 2px;
@@ -335,6 +339,7 @@
 		border-color: #9a7418;
 	}
 
+
 	.game-divider td {
 		padding: 0.3rem 0;
 		background: transparent;
@@ -351,6 +356,7 @@
 		white-space: normal;
 		vertical-align: middle;
 	}
+
 
 	.pick-logo {
 		grid-column: 1;
@@ -378,6 +384,10 @@
 		grid-row: 1;
 		min-width: 0;
 		align-self: end;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.4rem;
 	}
 
 	.team-line-meta {
@@ -398,6 +408,15 @@
 		color: var(--text);
 		line-height: 1.25;
 		min-width: 0;
+	}
+
+	.team-record {
+		font-size: 0.78rem;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		color: var(--text-muted);
+		line-height: 1.25;
+		flex-shrink: 0;
 	}
 
 	/* Mobile: win % first (left), then badges inline after it */
@@ -545,7 +564,12 @@
 		}
 
 		.team-line-primary {
-			display: contents;
+			display: flex;
+			flex-wrap: nowrap;
+			align-items: baseline;
+			gap: 0.45rem;
+			min-width: 0;
+			align-self: center;
 		}
 
 		/* Keep meta as one trailing flex cell: badges then win % (right-aligned) */
@@ -565,6 +589,12 @@
 			text-overflow: ellipsis;
 			white-space: nowrap;
 			align-self: center;
+		}
+
+		.team-record {
+			align-self: center;
+			font-size: 0.8rem;
+			white-space: nowrap;
 		}
 
 		.badges {

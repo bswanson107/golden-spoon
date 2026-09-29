@@ -60,7 +60,10 @@ export async function updateTeamRecords(
 	seasonYear: number,
 	games: GameSyncRow[]
 ): Promise<void> {
-	const records = new Map<string, { wins: number; losses: number; ties: number }>();
+	const records = new Map<
+		string,
+		{ wins: number; losses: number; ties: number; points_for: number; points_against: number }
+	>();
 
 	for (const game of games) {
 		if (game.status !== 'final') continue;
@@ -68,12 +71,23 @@ export async function updateTeamRecords(
 
 		for (const teamId of [game.awayTeam, game.homeTeam]) {
 			if (!records.has(teamId)) {
-				records.set(teamId, { wins: 0, losses: 0, ties: 0 });
+				records.set(teamId, {
+					wins: 0,
+					losses: 0,
+					ties: 0,
+					points_for: 0,
+					points_against: 0
+				});
 			}
 		}
 
 		const away = records.get(game.awayTeam)!;
 		const home = records.get(game.homeTeam)!;
+
+		away.points_for += game.awayScore;
+		away.points_against += game.homeScore;
+		home.points_for += game.homeScore;
+		home.points_against += game.awayScore;
 
 		if (game.isTie) {
 			away.ties += 1;
@@ -96,6 +110,8 @@ export async function updateTeamRecords(
 		wins: rec.wins,
 		losses: rec.losses,
 		ties: rec.ties,
+		points_for: rec.points_for,
+		points_against: rec.points_against,
 		updated_at: now
 	}));
 

@@ -10,6 +10,23 @@ type TeamRow = {
 	city: string | null;
 };
 
+type TeamRecordRow = {
+	team_id: string;
+	wins: number;
+	losses: number;
+	ties: number;
+	points_for?: number;
+	points_against?: number;
+};
+
+type TeamRecord = {
+	wins: number;
+	losses: number;
+	ties: number;
+	points_for: number;
+	points_against: number;
+};
+
 type GameQueryRow = {
 	id: string;
 	week_number: number;
@@ -30,19 +47,26 @@ function firstRelation<T>(value: T | T[] | null): T | null {
 	return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-function mapTeam(row: TeamRow | null): NflTeam | null {
+function mapTeam(row: TeamRow | null, record: TeamRecord | undefined): NflTeam | null {
 	if (!row) return null;
 	return {
 		id: row.id,
 		abbreviation: row.abbreviation,
 		name: row.name,
-		city: row.city
+		city: row.city,
+		wins: record?.wins ?? 0,
+		losses: record?.losses ?? 0,
+		ties: record?.ties ?? 0,
+		points_for: record?.points_for ?? 0,
+		points_against: record?.points_against ?? 0
 	};
 }
 
-function mapGameRow(row: GameQueryRow): WeekGame | null {
-	const home = mapTeam(firstRelation(row.home_team));
-	const away = mapTeam(firstRelation(row.away_team));
+function mapGameRow(row: GameQueryRow, recordsByTeam: Map<string, TeamRecord>): WeekGame | null {
+	const homeRow = firstRelation(row.home_team);
+	const awayRow = firstRelation(row.away_team);
+	const home = mapTeam(homeRow, homeRow ? recordsByTeam.get(homeRow.id) : undefined);
+	const away = mapTeam(awayRow, awayRow ? recordsByTeam.get(awayRow.id) : undefined);
 	if (!home || !away) return null;
 
 	return {
@@ -67,10 +91,11 @@ export async function fetchWeekGames(
 ): Promise<{ games: WeekGame[]; error: string | null }> {
 	const supabase = getSupabase();
 
-	const { data, error } = await supabase
-		.from('nfl_games')
-		.select(
-			`
+	const [gamesResult, recordsResult] = await Promise.all([
+		supabase
+			.from('nfl_games')
+			.select(
+				`
 			id,
 			week_number,
 			kickoff_at,
@@ -84,20 +109,56 @@ export async function fetchWeekGames(
 			home_team:nfl_teams!home_team_id ( id, abbreviation, name, city ),
 			away_team:nfl_teams!away_team_id ( id, abbreviation, name, city )
 		`
-		)
-		.eq('season_year', seasonYear)
-		.eq('week_number', weekNumber)
-		.order('kickoff_at');
+			)
+			.eq('season_year', seasonYear)
+			.eq('week_number', weekNumber)
+			.order('kickoff_at'),
+		supabase
+			.from('season_team_records')
+			.select('team_id, wins, losses, ties, points_for, points_against')
+			.eq('season_year', seasonYear)
+	]);
 
-	if (error) {
-		return { games: [], error: error.message };
+	if (gamesResult.error) {
+		return { games: [], error: gamesResult.error.message };
 	}
 
-	const games = (data ?? [])
-		.map((row) => mapGameRow(row as GameQueryRow))
+	let recordRows = (recordsResult.data ?? []) as TeamRecordRow[];
+	if (recordsResult.error) {
+		// Pre-migration DBs may lack points_for / points_against — fall back to W-L only.
+		const fallback = await supabase
+			.from('season_team_records')
+			.select('team_id, wins, losses, ties')
+			.eq('season_year', seasonYear);
+		if (!fallback.error) {
+			recordRows = (fallback.data ?? []) as TeamRecordRow[];
+		}
+	}
+
+	const recordsByTeam = new Map<string, TeamRecord>();
+	for (const row of recordRows) {
+		recordsByTeam.set(row.team_id, {
+			wins: Number(row.wins) || 0,
+			losses: Number(row.losses) || 0,
+			ties: Number(row.ties) || 0,
+			points_for: Number(row.points_for) || 0,
+			points_against: Number(row.points_against) || 0
+		});
+	}
+
+	const games = (gamesResult.data ?? [])
+		.map((row) => mapGameRow(row as GameQueryRow, recordsByTeam))
 		.filter((game): game is WeekGame => game !== null);
 
 	return { games, error: null };
+}
+
+/** Season W-L(-T) string for pick UI and standings-style display. */
+export function formatTeamRecord(team: Pick<NflTeam, 'wins' | 'losses' | 'ties'>): string {
+	if (team.ties > 0) {
+		return `${team.wins}-${team.losses}-${team.ties}`;
+	}
+	return `${team.wins}-${team.losses}`;
 }
 
 type WeekStatusQueryRow = {
