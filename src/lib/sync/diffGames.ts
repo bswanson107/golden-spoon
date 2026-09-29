@@ -9,6 +9,8 @@ export type GameDbRow = {
 	is_tie: boolean;
 	home_win_pct: number | null;
 	away_win_pct: number | null;
+	win_pct_source: string | null;
+	win_pct_updated_at: string | null;
 	kickoff_at: string;
 };
 
@@ -42,6 +44,24 @@ function oddsChanged(incoming: GameSyncRow, current: GameDbRow): boolean {
 	);
 }
 
+/**
+ * Upstream moneylines flap: an individual game can lose its odds for a few
+ * hours and get them back. Keep the stored win %ages (and when they were
+ * sourced) rather than blanking a game we have already priced.
+ */
+function retainStoredWinPct(incoming: GameSyncRow, current: GameDbRow): GameSyncRow {
+	if (incoming.homeWinPct !== null && incoming.awayWinPct !== null) return incoming;
+	if (current.home_win_pct === null || current.away_win_pct === null) return incoming;
+
+	return {
+		...incoming,
+		homeWinPct: current.home_win_pct,
+		awayWinPct: current.away_win_pct,
+		winPctSource: current.win_pct_source,
+		winPctUpdatedAt: current.win_pct_updated_at
+	};
+}
+
 export function diffGames(
 	incoming: GameSyncRow[],
 	current: GameDbRow[]
@@ -57,8 +77,9 @@ export function diffGames(
 			if (game.homeWinPct !== null || game.awayWinPct !== null) oddsChangedCount += 1;
 			continue;
 		}
-		if (oddsChanged(game, existing)) oddsChangedCount += 1;
-		if (rowChanged(game, existing)) toUpsert.push(game);
+		const merged = retainStoredWinPct(game, existing);
+		if (oddsChanged(merged, existing)) oddsChangedCount += 1;
+		if (rowChanged(merged, existing)) toUpsert.push(merged);
 	}
 
 	return { toUpsert, oddsChanged: oddsChangedCount };

@@ -15,6 +15,12 @@ export type GameSyncRow = {
 	isTie: boolean;
 	awayWinPct: number | null;
 	homeWinPct: number | null;
+	/**
+	 * Provenance of the win %ages above. Only set when they were carried forward
+	 * from a previous sync instead of read from this feed pull.
+	 */
+	winPctSource?: string | null;
+	winPctUpdatedAt?: string | null;
 	kickoffAtUtc: string;
 };
 

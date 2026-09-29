@@ -34,8 +34,10 @@ function toDbRow(game: GameSyncRow): DbGameUpsert {
 		winner_team_id: game.winner,
 		home_win_pct: game.homeWinPct,
 		away_win_pct: game.awayWinPct,
-		win_pct_source: hasWinPct ? 'moneyline' : null,
-		win_pct_updated_at: hasWinPct ? new Date().toISOString() : null,
+		win_pct_source: hasWinPct ? (game.winPctSource ?? 'moneyline') : null,
+		win_pct_updated_at: hasWinPct
+			? (game.winPctUpdatedAt ?? new Date().toISOString())
+			: null,
 		espn_event_id: game.espnEventId
 	};
 }

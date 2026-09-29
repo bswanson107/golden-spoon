@@ -2,8 +2,11 @@ name: Sync NFL Data
 
 on:
   schedule:
-    # Every 15 minutes Thu–Mon (UTC). Adjust for in-season coverage.
+    # Game days (Thu–Mon UTC): scores, odds moves, and kickoff win-% locks.
     - cron: '*/15 * * * 0,1,4,5,6'
+    # Tue–Wed have no games, but nflverse posts the next week's moneylines
+    # Tuesday afternoon ET — without this the new week stays blank until Thursday.
+    - cron: '*/30 * * * 2,3'
   workflow_dispatch:
 
 jobs:

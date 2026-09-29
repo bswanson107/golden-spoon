@@ -15,7 +15,7 @@ export async function runSync(
 	const { data: currentRows, error: loadError } = await adminClient
 		.from('nfl_games')
 		.select(
-			'espn_event_id, status, home_score, away_score, winner_team_id, is_tie, home_win_pct, away_win_pct, kickoff_at'
+			'espn_event_id, status, home_score, away_score, winner_team_id, is_tie, home_win_pct, away_win_pct, win_pct_source, win_pct_updated_at, kickoff_at'
 		)
 		.eq('season_year', seasonYear);
 
